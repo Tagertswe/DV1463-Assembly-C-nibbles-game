@@ -5,20 +5,20 @@ all: nibbles_asm nibbles_asm_start
 
 # Rule for compiling C source
 .c.o:
-	gcc -Os -march=i686 -Wall -g -c $<
+	gcc -Os -march=i686 -Wall -m32 -g -c $<
 
 # Rule for compiling assembly source
 .S.o:
-	as -gstabs $^ -o $@
+	as -gstabs $^ -m32 -o $@
 
 
 # ASM game
 nibbles_asm: main.o nibbles.o helpers.o
-	gcc $^ -o $@ -lcurses
+	gcc $^ -o $@ -m32 -lcurses
 
 # ASM game
 nibbles_asm_start: start.o nibbles.o helpers.o workaround.o
-	gcc $^ -o $@ -lcurses -lc -nostdlib
+	gcc $^ -o $@ -m32 -lcurses -lc -nostdlib
 
 clean:
 	rm -f *~
