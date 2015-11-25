@@ -2,8 +2,8 @@
 
 .text
 
-.globl	start_game
+.globl	_start
 
-.type start_game,@function
+.type _start,@function
 
-start_game:
+_start:
