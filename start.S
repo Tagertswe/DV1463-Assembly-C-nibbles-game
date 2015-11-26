@@ -3,13 +3,11 @@
 ###
 ### Global variables
 ###
-.bss
-.align 4
-result:	.word	0
+
 
 .data
-wormSize DB '0',0
-apple    DB '*',0
+wormSize:   .long 0
+apple:     .long 42
 
 .text
 
@@ -22,7 +20,7 @@ _start:
         pushl   $25
         pushl   $25
         pushl   wormSize
-        call    put_scr
+        call    nib_put_scr
         addl    $12, %esp
 
 
