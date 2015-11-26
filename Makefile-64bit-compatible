@@ -9,7 +9,7 @@ all: nibbles_asm nibbles_asm_start
 
 # Rule for compiling assembly source
 .S.o:
-	as -gstabs $^ -m32 -o $@
+	as -gstabs $^ -o $@
 
 
 # ASM game
