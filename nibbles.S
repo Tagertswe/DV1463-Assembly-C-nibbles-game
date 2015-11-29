@@ -5,8 +5,9 @@
 .set    apple,		42
 .set 	x,	        10
 .set	y,	        20
-.set	char,	        35
+.set	wormChar,	111
 .set    loopDelay,      1000000
+.set    border,         43
 .data
 print_format:   .asciz "Value of printout: %d \n"
 .text
@@ -18,11 +19,20 @@ start_game:
 /*Calls a function afterwards */
 /*First parameter is the last one in the C-function call */
         call	nib_init
-/*        pushl	$char
-        pushl	$x
-        pushl	$y
-        call nib_put_scr
-        addl    $12, %esp */
+       # call    setupWorm
+        # call     wLoop
+
+        # call    finish_program
+        # xorl    %ebx, %ebx
+        # xorl    %esi, %esi
+     #    xorl    %eax, %eax
+     #    movl    $25, %edx
+     # #   movl    $25, %eax
+     #    pushl	$wormChar
+     #    pushl	$edx
+     #    pushl	$ebx
+     #    call nib_put_scr
+     #    addl    $12, %esp
 
 /*PLACE ALL APPLES HERE*/
 
@@ -35,39 +45,160 @@ start_game:
 
 
 /*RUN WORM WITH CONDITIONS HERE IN LOOP*/
+setupWorm:
+        #resets used registry
         xorl    %ebx, %ebx
+        xorl    %ecx, %ecx
         xorl    %edx, %edx
-        addl    $25, %ebx
-        addl    $25, %edx
-wLoop:  cmpl    $0, %ebx
-        je      l
-        #pushl  %ebx
-        #pushl  $print_format
-        #call   printf
-        #addl   $8, %esp
 
-        call    nib_poll_kbd
-        movl    %eax, %edx
-        addl    $4, %esp
-        cmpl    $260, %eax #checks if left arrow has been pushed down
-        je      kbd_polling_left
-        pushl  $loopDelay
-        call    usleep
-        addl    $4, %esp
-        jmp     wLoop
-kbd_polling_left:
-        decl    %ebx
-        pushl	$char
-        pushl	$25
-        pushl	%edx
-        call nib_put_scr
+setupBorders: cmpl      $50, %ebx
+        je      resetValues
+        pushl   $border
+        pushl   %edx
+        pushl   %ecx
+        call    nib_put_scr
+        #moves value from stack back to ecx.
+        movl    12(%esp), %ecx
+        movl    8(%esp), %edx
         addl    $12, %esp
 
-        ret
+        #increments counter
+        incl    %ebx
+        #increments x axis value
+        incl    %ecx
+
+        jmp     setupBorders
+
+resetValues:
+        xorl    %ebx, %ebx
+        xorl    %edx, %edx
+        xorl    %eax, %eax
+ #       xorl    %ecx, %ecx
+        movl    $25, %ebx
+        movl    $25, %edx
+     #   movl    $25, %ecx
+        movl    $25, %eax
+
+        #checks if counter value is 0 or 50, then it will quit the loop 
+        #(hitting the wall simulation)
+# wLoop:  cmpl    $0, %ebx
+#         je      finish_program
+#         cmpl    $50, %ebx
+#         je      finish_program
 
 
-l:
-        ret
-        /* Finishing calls */
-        //call nib_end
+#         pushl   $wormChar
+#         # Y coord
+#         pushl   %eax
+#         # X coord
+#         pushl   %edx
+#         call    nib_put_scr
+
+#         #saves eax value back to the eax registry
+#         movl    8(%esp), %eax
+#         #saves edx value back to edx registry
+#         movl    12(%esp), %edx
+#         #pops stack
+#         addl    $12, %esp
+
+#         #pushes eax to stack before calling function
+#         pushl   %eax
+
+#        #måste slänga EDX på stacken före varje call och kopiera tillbaka till registret!
+#         pushl   %edx
+
+
+#         call    nib_poll_kbd
+#         cmpl    $260, %eax #checks if left arrow has been pushed down
+#         je      kbd_polling_left
+
+#         # cmpl    $261, %eax #checks if right arrow has been pushed down
+#         # je      kbd_polling_right
+
+#         # cmpl    $259, %eax #checks if up arrow has been pushed down
+#         # je      kbd_polling_up
+
+#         # cmpl    $258, %eax #checks if down arrow has been pushed down
+#         # je      kbd_polling_down
+
+
+#         pushl   %eax
+#         pushl   %edx
+
+#         #sets loop delay to around 1 second
+#         pushl  $loopDelay
+#         call    usleep
+
+#         #saves values to registry again after function call.
+#         movl    4(%esp), %eax
+#         movl    8(%esp), %edx
+
+#         #pops stack
+#         addl    $12, %esp
+
+#         jmp     wLoop
+
+
+# kbd_polling_left:
+#         #moves eax value from stack to registry EAX
+#         #moves edx value from stack to registry edx
+#         # and pops.
+#         movl    4(%esp), %eax
+#         movl    8(%esp), %edx
+#         addl    $8, %esp
+
+#         #decrements counter, since now the worm moves to the left in X-axis
+#         decl    %ebx
+#         #assigns new X-axis value to the X-value registry
+#         movl    %ebx, %edx
+#         pushl	$wormChar
+#         pushl	$25
+#         pushl	$edx
+#         call nib_put_scr
+
+#         #saves value to edx registry from stack after call.
+#         movl    12(%esp), %edx
+#         #saves value from edx back to counter (may not be needed, but just in case)
+#         movl    %edx, %eax
+#         #pops stack
+#         addl    $12, %esp
+
+#         jmp     wLoop
+
+# # kbd_polling_right:
+# #         incl    %ebx
+# #         pushl   $wormChar
+# #         pushl   $25
+# #         pushl   %ebx
+# #         call nib_put_scr
+# #         addl    $12, %esp
+# #         ret
+
+# # kbd_polling_up:
+# #         decl    %edx
+# #         pushl   $wormChar
+# #         pushl   %edx
+# #         pushl   $25
+# #         call nib_put_scr
+# #         addl    $12, %esp
+# #         ret
+
+# # kbd_polling_down:
+# #         incl    %edx
+# #         pushl   $wormChar
+# #         pushl   %edx
+# #         pushl   $25
+# #         call nib_put_scr
+# #         addl    $12, %esp
+# #         ret
+
+
+
+
+ finish_program:
+     #   ret
+#         /* Finishing calls */
+      #  call nib_end
+      #  ret
         call exit
+        ret
