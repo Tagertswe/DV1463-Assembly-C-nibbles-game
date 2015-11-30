@@ -53,14 +53,17 @@ setupWorm:
 
 setupBorders: cmpl      $50, %ebx
         je      resetValues
-        pushl   $border
-        pushl   %edx
-        pushl   %ecx
+        pushl   %ecx # 0
+        pushl   $border # 4
+        pushl   %edx # 8
+        pushl   %ecx # 12
         call    nib_put_scr
-        #moves value from stack back to ecx.
-        movl    12(%esp), %ecx
-        movl    8(%esp), %edx
-        addl    $12, %esp
+
+        popl    %ecx # pops 12
+        popl    %edx # pops 8
+        addl    $4, %esp #pops 4
+        popl    %ecx #pops 0
+
 
         #increments counter
         incl    %ebx
@@ -81,89 +84,95 @@ resetValues:
 
         #checks if counter value is 0 or 50, then it will quit the loop 
         #(hitting the wall simulation)
-# wLoop:  cmpl    $0, %ebx
-#         je      finish_program
-#         cmpl    $50, %ebx
-#         je      finish_program
+wLoop:  cmpl    $0, %ebx
+        je      finish_program
+        cmpl    $50, %ebx
+        je      finish_program
+
+        pushl   %edx
+        pushl   %eax
+        pushl   $wormChar
+        # Y coord
+        pushl   %eax
+        # X coord
+        pushl   %edx
+        call    nib_put_scr
+
+        */ Clean up stack /*
+        #saves edx value back to the eax registry
+        popl    %edx
+        #saves eax value back to edx registry
+        popl    %eax
+        #pops stack
+        addl    $4, %esp
+        popl    %eax
+        popl    %edx
 
 
-#         pushl   $wormChar
-#         # Y coord
-#         pushl   %eax
-#         # X coord
-#         pushl   %edx
-#         call    nib_put_scr
-
-#         #saves eax value back to the eax registry
-#         movl    8(%esp), %eax
-#         #saves edx value back to edx registry
-#         movl    12(%esp), %edx
-#         #pops stack
-#         addl    $12, %esp
-
-#         #pushes eax to stack before calling function
-#         pushl   %eax
-
-#        #måste slänga EDX på stacken före varje call och kopiera tillbaka till registret!
-#         pushl   %edx
 
 
-#         call    nib_poll_kbd
-#         cmpl    $260, %eax #checks if left arrow has been pushed down
-#         je      kbd_polling_left
+        #pushes eax to stack before calling function
+        pushl   %eax
 
-#         # cmpl    $261, %eax #checks if right arrow has been pushed down
-#         # je      kbd_polling_right
-
-#         # cmpl    $259, %eax #checks if up arrow has been pushed down
-#         # je      kbd_polling_up
-
-#         # cmpl    $258, %eax #checks if down arrow has been pushed down
-#         # je      kbd_polling_down
+       #måste slänga EDX på stacken före varje call och kopiera tillbaka till registret!
+        pushl   %edx
 
 
-#         pushl   %eax
-#         pushl   %edx
+        call    nib_poll_kbd
+        cmpl    $260, %eax #checks if left arrow has been pushed down
+        je      kbd_polling_left
 
-#         #sets loop delay to around 1 second
-#         pushl  $loopDelay
-#         call    usleep
+        # cmpl    $261, %eax #checks if right arrow has been pushed down
+        # je      kbd_polling_right
 
-#         #saves values to registry again after function call.
-#         movl    4(%esp), %eax
-#         movl    8(%esp), %edx
+        # cmpl    $259, %eax #checks if up arrow has been pushed down
+        # je      kbd_polling_up
 
-#         #pops stack
-#         addl    $12, %esp
-
-#         jmp     wLoop
+        # cmpl    $258, %eax #checks if down arrow has been pushed down
+        # je      kbd_polling_down
 
 
-# kbd_polling_left:
-#         #moves eax value from stack to registry EAX
-#         #moves edx value from stack to registry edx
-#         # and pops.
-#         movl    4(%esp), %eax
-#         movl    8(%esp), %edx
-#         addl    $8, %esp
+        pushl   %eax
+        pushl   %edx
 
-#         #decrements counter, since now the worm moves to the left in X-axis
-#         decl    %ebx
-#         #assigns new X-axis value to the X-value registry
-#         movl    %ebx, %edx
-#         pushl	$wormChar
-#         pushl	$25
-#         pushl	$edx
-#         call nib_put_scr
+        #sets loop delay to around 1 second
+        pushl  $loopDelay
+        call    usleep
 
-#         #saves value to edx registry from stack after call.
-#         movl    12(%esp), %edx
-#         #saves value from edx back to counter (may not be needed, but just in case)
-#         movl    %edx, %eax
-#         #pops stack
-#         addl    $12, %esp
+        #saves values to registry again after function call.
+        movl    4(%esp), %eax
+        movl    8(%esp), %edx
 
-#         jmp     wLoop
+        #pops stack
+        addl    $12, %esp
+
+        jmp     wLoop
+
+
+kbd_polling_left:
+        #moves eax value from stack to registry EAX
+        #moves edx value from stack to registry edx
+        # and pops.
+        popl    %edx
+        popl    %eax
+
+        #decrements counter, since now the worm moves to the left in X-axis
+        decl    %ebx
+        #assigns new X-axis value to the X-value registry
+        movl    %ebx, %edx
+        pushl	$wormChar
+        pushl	$25
+        pushl	$edx
+        call nib_put_scr
+
+        #saves value to edx registry from stack after call.
+        movl    12(%esp), %edx
+        #saves value from edx back to counter (may not be needed, but just in case)
+        movl    %edx, %eax
+        #pops stack
+        addl    $12, %esp
+
+        jmp     wLoop
 
 # # kbd_polling_right:
 # #         incl    %ebx
