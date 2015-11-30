@@ -43,7 +43,6 @@ start_game:
 
 
 
-
 /*RUN WORM WITH CONDITIONS HERE IN LOOP*/
 setupWorm:
         #resets used registry
@@ -111,16 +110,19 @@ wLoop:  cmpl    $0, %ebx
 
 
 
-        #pushes eax to stack before calling function
-        pushl   %eax
+       #  #pushes eax to stack before calling function
+       #  pushl   %eax
+       # #måste slänga EDX på stacken före varje call och kopiera tillbaka till registret!
+       #  pushl   %edx
+       #  #pushes eax to stack before calling function
+       #  pushl   %eax
+       # #måste slänga EDX på stacken före varje call och kopiera tillbaka till registret!
+       #  pushl   %edx
 
-       #måste slänga EDX på stacken före varje call och kopiera tillbaka till registret!
-        pushl   %edx
 
-
-        call    nib_poll_kbd
-        cmpl    $260, %eax #checks if left arrow has been pushed down
-        je      kbd_polling_left
+       #  call    nib_poll_kbd
+       #  cmpl    $260, %eax #checks if left arrow has been pushed down
+       #  je      kbd_polling_left
 
         # cmpl    $261, %eax #checks if right arrow has been pushed down
         # je      kbd_polling_right
@@ -131,7 +133,9 @@ wLoop:  cmpl    $0, %ebx
         # cmpl    $258, %eax #checks if down arrow has been pushed down
         # je      kbd_polling_down
 
-
+        #save registry values on stack before jump
+        pushl   %eax
+        pushl   %edx
         pushl   %eax
         pushl   %edx
 
@@ -139,12 +143,11 @@ wLoop:  cmpl    $0, %ebx
         pushl  $loopDelay
         call    usleep
 
-        #saves values to registry again after function call.
-        movl    4(%esp), %eax
-        movl    8(%esp), %edx
-
-        #pops stack
-        addl    $12, %esp
+        */ Clean up stack /*
+        popl    %eax
+        popl    %edx
+        popl    %eax
+        popl    %edx
 
         jmp     wLoop
 
@@ -155,22 +158,26 @@ kbd_polling_left:
         # and pops.
         popl    %edx
         popl    %eax
+        popl    %edx
+        popl    %eax
 
         #decrements counter, since now the worm moves to the left in X-axis
         decl    %ebx
         #assigns new X-axis value to the X-value registry
         movl    %ebx, %edx
+        #saves edx on stack
+        pushl   %edx
         pushl	$wormChar
         pushl	$25
-        pushl	$edx
+        pushl	%edx
         call nib_put_scr
 
-        #saves value to edx registry from stack after call.
-        movl    12(%esp), %edx
-        #saves value from edx back to counter (may not be needed, but just in case)
-        movl    %edx, %eax
-        #pops stack
-        addl    $12, %esp
+        */ Clean up stack /*
+        popl    %edx
+        addl    $4, %esp
+        addl    $4, %esp
+        popl    %edx
+
 
         jmp     wLoop
 
