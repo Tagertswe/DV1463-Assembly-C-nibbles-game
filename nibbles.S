@@ -98,10 +98,11 @@ resetValues:
 
         
         #load array into a registry
-        #leal    array, %destination registry
-        # pushl 4(%destination registry)
-        # popl  %destination registry
+        leal    array, %ebx
 
+        # popl  %destination registry
+        movl    $25, 0(%ebx)
+        movl    $25, 4(%ebx)
         jmp wLoop
 
 
@@ -112,11 +113,11 @@ wLoop:  cmpl    $0, %ebx
         cmpl    $50, %ebx
         je      finish_loop
 
-
         pushl   %ebx
+        pushl   4(%ebx)
         pushl   $wormChar
         pushl   %ebx
-        pushl   %ebx
+        pushl   4(%ebx)
         # Y coord
         #pushl   %ebx
         # X coord
@@ -125,20 +126,36 @@ wLoop:  cmpl    $0, %ebx
 
         popl    %ebx
         popl    %ebx
-        addl    $4, %esp
+        addl    $8, %esp
+        popl    %ebx
         popl    %ebx
 
 
-       #  call    nib_poll_kbd
-       #  cmpl    $260, %eax #checks if left arrow has been pushed down
-       #  je      kbd_polling_left
+        #printout for debugging
+       #  pushl   %edx
+       #  pushl   4(%edx)
+
+       #  pushl   4(%edx)
+       #  pushl   print_format
+       #  call printf
+
+       #  addl    $12, %esp
+       #  popl    %edx
+       #  popl    %edx
+       #  popl    %edx
 
 
-       # #  #sets loop delay to around 1 second
-        pushl  $loopDelay
-        call    usleep
 
-        addl    $0, %esp
+       # #  call    nib_poll_kbd
+       # #  cmpl    $260, %eax #checks if left arrow has been pushed down
+       # #  je      kbd_polling_left
+
+
+       # # #  #sets loop delay to around 1 second
+       #  pushl  $loopDelay
+       #  call    usleep
+
+        # addl    $0, %esp
 
  
 
