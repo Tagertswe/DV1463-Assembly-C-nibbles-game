@@ -8,7 +8,12 @@
 .set	wormChar,	    111
 .set    loopDelay,      1000000
 .set    border,         43
+
+
+.bss
+#array:  .space 400
 .data
+array:  .space 400
 print_format:   .asciz "Value of printout: %d \n"
 .text
 
@@ -19,8 +24,11 @@ start_game:
 /*Calls a function afterwards */
 /*First parameter is the last one in the C-function call */
         call	nib_init
-       # call    setupWorm
-       # call    wLoop
+        call    setupWorm
+       # call    resetArray
+        call    setupBorders
+        call    resetValues
+        call    exit_program
        # call    exit_program
 
         # call    finish_program
@@ -45,11 +53,19 @@ start_game:
 
 
 /*RUN WORM WITH CONDITIONS HERE IN LOOP*/
+
+# resetArray: cmpl    $400, %ebx
+#             je      ret
+#             addl    $4, %ebx
+#             movl    $0, %ebx(array)
+
 setupWorm:
         #resets used registry
         xorl    %ebx, %ebx
         xorl    %ecx, %ecx
         xorl    %edx, %edx
+        xorl    %eax, %eax
+        jmp     setupBorders
 
 setupBorders: cmpl      $50, %ebx
         je      resetValues
@@ -76,11 +92,16 @@ resetValues:
         xorl    %ebx, %ebx
         xorl    %edx, %edx
         xorl    %eax, %eax
- #       xorl    %ecx, %ecx
+        xorl    %ecx, %ecx
         movl    $25, %ebx
         movl    $25, %edx
-     #   movl    $25, %ecx
-       # movl    $25, %eax
+
+        
+        #load array into a registry
+        #leal    array, %destination registry
+        # pushl 4(%destination registry)
+        # popl  %destination registry
+
         jmp wLoop
 
 
@@ -91,83 +112,34 @@ wLoop:  cmpl    $0, %ebx
         cmpl    $50, %ebx
         je      finish_loop
 
- #       pushl   %ebx
-#        pushl   %eax
-       # pushl   %ebx
-      #  pushl   %ebx
+
         pushl   %ebx
         pushl   $wormChar
+        pushl   %ebx
+        pushl   %ebx
         # Y coord
-        pushl   %ebx
+        #pushl   %ebx
         # X coord
-        pushl   %ebx
+        #pushl   %ebx
         call    nib_put_scr
 
         popl    %ebx
         popl    %ebx
-        addl    $8, %esp
+        addl    $4, %esp
         popl    %ebx
-     #   popl    %ebx
-    #    popl    %ebx
-        # Clean up stack
-                #saves edx value back to the eax registry
-        # popl    %edx
-        # #saves eax value back to edx registry
-        # popl    %eax
-        # #pops stack
-        # addl    $8, %esp
-        # popl    %eax
-        # popl    %edx
-
-
-
-
-        #pushes eax to stack before calling function
-       #  pushl   %eax
-       # #måste slänga EDX på stacken före varje call och kopiera tillbaka till registret!
-       #  pushl   %edx
-       #  #pushes eax to stack before calling function
-       #  pushl   %eax
-       # #måste slänga EDX på stacken före varje call och kopiera tillbaka till registret!
-       # pushl   %edx
-       # pushl    %edx
 
 
        #  call    nib_poll_kbd
        #  cmpl    $260, %eax #checks if left arrow has been pushed down
        #  je      kbd_polling_left
 
-       #  # cmpl    $261, %eax #checks if right arrow has been pushed down
-       #  # je      kbd_polling_right
 
-       #  # cmpl    $259, %eax #checks if up arrow has been pushed down
-       #  # je      kbd_polling_up
-
-       #  # cmpl    $258, %eax #checks if down arrow has been pushed down
-       #  # je      kbd_polling_down
-
-       #  #save registry values on stack before call
-       #  # pushl   %edx
-       #  # pushl   %edx
-       #  # pushl   %edx
-       # #  pushl   %edx
-       #  pushl    %ebx
-       #  pushl    %ebx
-       #  pushl    %ebx
        # #  #sets loop delay to around 1 second
         pushl  $loopDelay
         call    usleep
 
-        addl    $12, %esp
-        # popl    %ebx
-        # popl    %ebx    
-        # popl    %ebx
-        #popl    %ebx
-       # popl    %ebx
+        addl    $0, %esp
 
-       #  #  # Clean up stack
-       #  addl    $4, %esp
-       #  popl    %edx
  
 
         jmp     wLoop
@@ -201,42 +173,11 @@ wLoop:  cmpl    $0, %ebx
 
 #         jmp     wLoop
 
-# # kbd_polling_right:
-# #         incl    %ebx
-# #         pushl   $wormChar
-# #         pushl   $25
-# #         pushl   %ebx
-# #         call nib_put_scr
-# #         addl    $12, %esp
-# #         ret
-
-# # kbd_polling_up:
-# #         decl    %edx
-# #         pushl   $wormChar
-# #         pushl   %edx
-# #         pushl   $25
-# #         call nib_put_scr
-# #         addl    $12, %esp
-# #         ret
-
-# # kbd_polling_down:
-# #         incl    %edx
-# #         pushl   $wormChar
-# #         pushl   %edx
-# #         pushl   $25
-# #         call nib_put_scr
-# #         addl    $12, %esp
-# #         ret
-
-
-
 
  finish_loop:
-        ret
+        jmp exit_program
 
  exit_program:       
 #         /* Finishing calls */
         call nib_end
-      #  ret
         call exit
-        ret
