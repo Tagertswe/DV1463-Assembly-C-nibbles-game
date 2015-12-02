@@ -13,7 +13,8 @@
 .bss
 #array:  .space 400
 .data
-array:  .space 400
+array:  .space 410
+
 print_format:   .asciz "Value of printout: %d \n"
 .text
 
@@ -26,9 +27,9 @@ start_game:
         call	nib_init
         call    setupWorm
        # call    resetArray
-        call    setupBorders
-        call    resetValues
-        call    exit_program
+        # call    setupBorders
+        # call    resetValues
+        # call    exit_program
        # call    exit_program
 
         # call    finish_program
@@ -93,13 +94,12 @@ resetValues:
         xorl    %edx, %edx
         xorl    %eax, %eax
         xorl    %ecx, %ecx
-        movl    $25, %edx
 
         #load array into a registry
         leal    array, %ebx
 
         # popl  %destination registry
-        movl    $25, 0(%ebx)
+        movl    $25, (%ebx)
         movl    $25, 4(%ebx)
 
         jmp print_worm_middle
@@ -114,22 +114,29 @@ print_worm_middle:
         addl    $12, %esp
 
         #assigns counter to 25.
-        movl    $25, %edx
+        movl    $25, %ecx
 
         jmp wLoop
 
         #checks if counter value is 0 or 50, then it will quit the loop 
         #(hitting the wall simulation)
-wLoop:  cmpl    $0, %edx
+wLoop:  cmpl    $0, %ecx
         je      finish_loop
-        cmpl    $50, %edx
+        cmpl    $50, %ecx
         je      finish_loop
 
         #saves counter in registry ecx due to edx corruption during kbd call.
-        movl    %edx, %ecx
+        # xorl    %ecx, %ecx
+        # movl    %edx, %ecx
+        movl    %ecx, 404(%ebx)
         call    nib_poll_kbd
         cmpl    $260, %eax #checks if left arrow has been pushed down
         je      kbd_polling_left
+        call    no_input
+
+        cmpl    $261, %eax #checks if left arrow has been pushed down
+        je      kbd_polling_right
+        call    no_input
 
 
        # # #  #sets loop delay to around 1 second
@@ -140,49 +147,92 @@ wLoop:  cmpl    $0, %edx
         # addl    $4, %esp
         # popl    %ecx
 
- 
+        
 
         jmp     wLoop
 
 
 kbd_polling_left:
         #restores the counter value to edx
-        movl    %ecx, %edx
+        # xorl    %edx, %edx
+        # movl    %ecx, %edx
+        movl    404(%ebx), %ecx
+        #movl    $0, 8(%ebx)
 
         #decrements the counter value, as well as the X-coordinate
-        decl    %edx
+        decl    %ecx
+        movl    %ecx, 8(%ebx)
         #X-coordinate
         decl    (%ebx)
 
-
-        pushl   %edx
-        pushl	$wormChar
-        pushl	$25
+        # pushl   %edx
+        # pushl   %edx
+        pushl	  $wormChar
+        pushl	  4(%ebx)
         pushl   (%ebx)
         call nib_put_scr
 
         #Clean up stack
-        popl    %ebx
-        addl    $8, %esp
-        addl    $4, %esp
-        popl    %edx
+        addl    $12, %esp
+        # popl    %edx
+        # popl    %edx
+
+        # pushl   %edx
+        # pushl   print_format
+        # call    printf
+        # addl    $8, %esp
 
         #moves temporary value for counter back into %edx registry
-        xorl    %edx, %edx
-        movl    (%ebx), %edx
-
-        #resets temp counter registry save
-        xorl    %ecx, %ecx
-        xorl    %eax, %eax
-
+        movl    404(%ebx), %ecx
 
         jmp     wLoop
 
+
+kbd_polling_right:
+        #restores the counter value to edx
+        # xorl    %edx, %edx
+        # movl    %ecx, %edx
+        movl    404(%ebx), %ecx
+        #movl    $0, 8(%ebx)
+
+        #decrements the counter value, as well as the X-coordinate
+        incl   %ecx
+        movl    %ecx, 404(%ebx)
+        #X-coordinate
+        incl    (%ebx)
+
+        # pushl   %edx
+        # pushl   %edx
+        pushl   $wormChar
+        pushl   4(%ebx)
+        pushl   (%ebx)
+        call nib_put_scr
+
+        #Clean up stack
+        addl    $12, %esp
+        # popl    %edx
+        # popl    %edx
+
+        # pushl   %edx
+        # pushl   print_format
+        # call    printf
+        # addl    $8, %esp
+
+        #moves temporary value for counter back into %edx registry
+        movl    404(%ebx), %ecx
+
+        jmp     wLoop
+
+
+no_input:
+        movl    404(%ebx), %ecx
+        #jmp     wLoop
+        ret
 
  finish_loop:
         jmp exit_program
 
  exit_program:       
 #         /* Finishing calls */
-        call nib_end
+       call nib_end
         call exit
