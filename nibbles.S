@@ -6,7 +6,7 @@
 .set 	x,	            25
 .set	y,	            25
 .set	wormChar,	    111
-.set    loopDelay,      1000000
+.set    loopDelay,      100000
 .set    border,         43
 
 
@@ -14,6 +14,8 @@
 #array:  .space 400
 .data
 array:  .space 410
+counter: .long 0
+last_position: .long 0
 
 print_format:   .asciz "Value of printout: %d \n"
 .text
@@ -126,83 +128,62 @@ wLoop:  cmpl    $0, %ecx
         je      finish_loop
 
         #saves counter in registry ecx due to edx corruption during kbd call.
-        # xorl    %ecx, %ecx
-        # movl    %edx, %ecx
         movl    %ecx, 404(%ebx)
+
         call    nib_poll_kbd
         cmpl    $260, %eax #checks if left arrow has been pushed down
         je      kbd_polling_left
-        call    no_input
 
         cmpl    $261, %eax #checks if left arrow has been pushed down
         je      kbd_polling_right
+
+        cmpl    $259, %eax #checks if left arrow has been pushed down
+        je      kbd_polling_up
+
+        cmpl    $258, %eax #checks if left arrow has been pushed down
+        je      kbd_polling_down
+
         call    no_input
 
+        # about 1 second delay for worm position update
+        movl    %ecx, 404(%ebx)
+        pushl   $loopDelay
+        call    usleep
 
-       # # #  #sets loop delay to around 1 second
-        # pushl   %ecx
-        # pushl  $loopDelay
-        # call    usleep
+        #cleanup stack
+        addl    $4, %esp
 
-        # addl    $4, %esp
-        # popl    %ecx
+        #restores counter after c-call
+        movl    404(%ebx), %ecx
 
-        
+
 
         jmp     wLoop
 
-
 kbd_polling_left:
-        #restores the counter value to edx
-        # xorl    %edx, %edx
-        # movl    %ecx, %edx
-        movl    404(%ebx), %ecx
-        #movl    $0, 8(%ebx)
+        movl    $260, last_position
 
-        #decrements the counter value, as well as the X-coordinate
-        decl    %ecx
-        movl    %ecx, 8(%ebx)
-        #X-coordinate
-        decl    (%ebx)
-
-        # pushl   %edx
-        # pushl   %edx
-        pushl	  $wormChar
-        pushl	  4(%ebx)
+        #removes old worm position
+        pushl   $32
+        pushl   4(%ebx)
         pushl   (%ebx)
         call nib_put_scr
 
         #Clean up stack
         addl    $12, %esp
-        # popl    %edx
-        # popl    %edx
 
-        # pushl   %edx
-        # pushl   print_format
-        # call    printf
-        # addl    $8, %esp
-
-        #moves temporary value for counter back into %edx registry
+        #restores the counter value
         movl    404(%ebx), %ecx
-
-        jmp     wLoop
-
-
-kbd_polling_right:
-        #restores the counter value to edx
-        # xorl    %edx, %edx
-        # movl    %ecx, %edx
-        movl    404(%ebx), %ecx
-        #movl    $0, 8(%ebx)
 
         #decrements the counter value, as well as the X-coordinate
-        incl   %ecx
-        movl    %ecx, 404(%ebx)
+        decl    %ecx
         #X-coordinate
-        incl    (%ebx)
+        decl    (%ebx)
 
-        # pushl   %edx
-        # pushl   %edx
+        #saves counter before c-call
+        movl    %ecx, 404(%ebx)
+
+
         pushl   $wormChar
         pushl   4(%ebx)
         pushl   (%ebx)
@@ -210,23 +191,158 @@ kbd_polling_right:
 
         #Clean up stack
         addl    $12, %esp
-        # popl    %edx
-        # popl    %edx
-
-        # pushl   %edx
-        # pushl   print_format
-        # call    printf
-        # addl    $8, %esp
 
         #moves temporary value for counter back into %edx registry
         movl    404(%ebx), %ecx
 
-        jmp     wLoop
+        jmp wLoop
+
+
+kbd_polling_right:
+        movl    $261, last_position
+
+        #removes old worm position
+        pushl   $32
+        pushl   4(%ebx)
+        pushl   (%ebx)
+        call nib_put_scr
+
+        #Clean up stack
+        addl    $12, %esp
+
+        #restores the counter value
+        movl    404(%ebx), %ecx
+
+        #decrements the counter value, as well as the X-coordinate
+        incl    %ecx
+        #X-coordinate
+        incl   (%ebx)
+
+        #saves counter before c-call
+        movl    %ecx, 404(%ebx)
+
+
+        pushl   $wormChar
+        pushl   4(%ebx)
+        pushl   (%ebx)
+        call nib_put_scr
+
+        #Clean up stack
+        addl    $12, %esp
+
+        #moves temporary value for counter back into %edx registry
+        movl    404(%ebx), %ecx
+
+        jmp wLoop
+
+
+kbd_polling_up:
+        movl    $259, last_position
+
+        #removes old worm position
+        pushl   $32
+        pushl   4(%ebx)
+        pushl   (%ebx)
+        call nib_put_scr
+
+        #Clean up stack
+        addl    $12, %esp
+
+        #restores the counter value
+        movl    404(%ebx), %ecx
+
+        #decrements the counter value, as well as the X-coordinate
+        decl    %ecx
+        #X-coordinate
+        decl   4(%ebx)
+
+        #saves counter before c-call
+        movl    %ecx, 404(%ebx)
+
+
+        pushl   $wormChar
+        pushl   4(%ebx)
+        pushl   (%ebx)
+        call nib_put_scr
+
+        #Clean up stack
+        addl    $12, %esp
+
+        #moves temporary value for counter back into %edx registry
+        movl    404(%ebx), %ecx
+
+        jmp wLoop
+
+
+kbd_polling_down:
+        movl    $258, last_position
+
+        #removes old worm position
+        pushl   $32
+        pushl   4(%ebx)
+        pushl   (%ebx)
+        call nib_put_scr
+
+        #Clean up stack
+        addl    $12, %esp
+
+        #restores the counter value
+        movl    404(%ebx), %ecx
+
+        #decrements the counter value, as well as the X-coordinate
+        incl    %ecx
+        #X-coordinate
+        incl   4(%ebx)
+
+        #saves counter before c-call
+        movl    %ecx, 404(%ebx)
+
+
+        pushl   $wormChar
+        pushl   4(%ebx)
+        pushl   (%ebx)
+        call nib_put_scr
+
+        #Clean up stack
+        addl    $12, %esp
+
+        #moves temporary value for counter back into %edx registry
+        movl    404(%ebx), %ecx
+
+        jmp wLoop
 
 
 no_input:
+        #restore counter
         movl    404(%ebx), %ecx
-        #jmp     wLoop
+
+        # about 1 second delay for worm position update
+        #save counter
+        movl    %ecx, 404(%ebx)
+        pushl   $loopDelay
+        call    usleep
+
+        #cleanup stack
+        addl    $4, %esp
+
+        #restore counter
+        movl    404(%ebx), %ecx
+
+        cmpl    $260, last_position
+        je      kbd_polling_left
+
+        cmpl    $261, last_position
+        je      kbd_polling_right
+
+        cmpl    $259, last_position
+        je      kbd_polling_up
+
+        cmpl    $258, last_position #checks if left arrow has been pushed down
+        je      kbd_polling_down
+
+        movl    404(%ebx), %ecx
+        # cmpl    $261, %eax
+        # je      kbd_polling_right
         ret
 
  finish_loop:
