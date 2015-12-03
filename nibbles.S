@@ -17,6 +17,7 @@ array:  .space 410
 counter: .long 0
 last_position: .long 0
 wormSize_counter: .long 0
+temp-Y:  .long 0
 
 print_format:   .asciz "Value of printout: %d \n"
 .text
@@ -912,12 +913,31 @@ finish_body_part_update:
 
 
 body_hit_detection_init:
+        #current body x
         xorl    %eax, %eax
+        #current body y
         xorl    %edx, %edx
+        #head x
+        xorl    %ecx, %ecx
+        #head y
+        #need to load temp-Y into a registry
+        movl    $0, temp-Y
 
+        #loads counter into %edi for easier offset access in the upcoming loop
+        xorl    %edi, %edi
+        leal    counter, %edi
+
+        xorl    %esi, %esi
+        
+        #loads X and Y head coordinates into two registry
+        movl    (%ebx, %edi,8), %ecx
+        movl    (%ebx, %edi, 8), $temp-Y
+
+
+#work in progress, compare head x, y against current body part x, y, add +1 to esi,
+#if esi == 2, then quit program as then head is considered to have collided with its own body
 collision_detect:
-        4(%ebx, %ecx, 8)
-        (%ebx, %ecx, 8)
+        cmpl    
         incl    counter
         cmpl    
 
