@@ -1,7 +1,7 @@
 ###
 ### Constants
 ###
-.set	wormSize,	    4
+.set	wormSize,	    3
 .set    apple,		    42
 .set 	x,	            25
 .set	y,	            25
@@ -104,15 +104,26 @@ resetValues:
         movl    $25, (%ebx)
         movl    $25, 4(%ebx)
 
-        #temporarily try and add size+1 to the worm
-        movl    $1, %edx
+        xorl    %eax, %eax
+        leal    wormSize, %eax
+        jmp     reset_worm_body
+
+
+reset_worm_body:
         movl    $25, (%ebx, %edx, 8)
         movl    $25, 4(%ebx, %edx, 8)
-        xorl    %edx, %edx
 
+        incl    %edx
+        #jumps to next body part to initialize it.
+        cmpl    %edx, %eax
+        ja      reset_worm_body
+
+        #else if whole body has been initiated
         jmp print_worm_middle
 
 print_worm_middle:
+        xorl    %edx, %edx
+
         pushl   $wormChar
         pushl   4(%ebx)
         pushl   (%ebx)
@@ -125,6 +136,9 @@ print_worm_middle:
         movl    $25, %ecx
 
         jmp wLoop
+
+
+
 
         #checks if counter value is 0 or 50, then it will quit the loop 
         #(hitting the wall simulation)
@@ -143,11 +157,11 @@ wLoop:  cmpl    $0, %ecx
         cmpl    $261, %eax #checks if left arrow has been pushed down
         je      kbd_polling_right
 
-        cmpl    $259, %eax #checks if left arrow has been pushed down
-        je      kbd_polling_up
+        # cmpl    $259, %eax #checks if left arrow has been pushed down
+        # je      kbd_polling_up
 
-        cmpl    $258, %eax #checks if left arrow has been pushed down
-        je      kbd_polling_down
+        # cmpl    $258, %eax #checks if left arrow has been pushed down
+        # je      kbd_polling_down
 
         call    restore_counter
 
@@ -323,6 +337,7 @@ update_body_parts_left:
 
 
         #if worm still has body parts to update, then it will loop again
+
         #maybe reverse these statements?
         cmpl    %ecx, %edx
         ja      update_body_parts_left
@@ -854,11 +869,11 @@ no_input:
         cmpl    $261, last_position
         je      kbd_polling_right
 
-        cmpl    $259, last_position
-        je      kbd_polling_up
+        # cmpl    $259, last_position
+        # je      kbd_polling_up
 
-        cmpl    $258, last_position #checks if left arrow has been pushed down
-        je      kbd_polling_down
+        # cmpl    $258, last_position #checks if left arrow has been pushed down
+        # je      kbd_polling_down
 
 
         xorl    %ecx, %ecx
