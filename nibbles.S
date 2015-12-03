@@ -1,7 +1,7 @@
 ###
 ### Constants
 ###
-.set	wormSize,	    5
+.set	wormSize,	    1
 .set    apple,		    42
 .set 	x,	            25
 .set	y,	            25
@@ -16,6 +16,7 @@
 array:  .space 410
 counter: .long 0
 last_position: .long 0
+wormSize_counter: .long 0
 
 print_format:   .asciz "Value of printout: %d \n"
 .text
@@ -36,7 +37,7 @@ start_game:
 
         # call    finish_program
         # xorl    %ebx, %ebx
-        # xorl    %esi, %esi
+        # xorl    %esi, %es0
      #    xorl    %eax, %eax
      #    movl    $25, %edx
      # #   movl    $25, %eax
@@ -57,11 +58,8 @@ start_game:
 
 /*RUN WORM WITH CONDITIONS HERE IN LOOP*/
 
-# resetArray: cmpl    $400, %ebx
-#             je      ret
-#             addl    $4, %ebx
-#             movl    $0, %ebx(array)
 
+#delete this, unecessary
 setupWorm:
         #resets used registry
         xorl    %ebx, %ebx
@@ -69,7 +67,7 @@ setupWorm:
         xorl    %edx, %edx
         xorl    %eax, %eax
         jmp     setupBorders
-
+/* add left, down, right borders in this one later!!!!! */
 setupBorders: cmpl      $50, %ebx
         je      resetValues
         pushl   %ecx # 0
@@ -91,6 +89,8 @@ setupBorders: cmpl      $50, %ebx
 
         jmp     setupBorders
 
+
+#rename this
 resetValues:
         xorl    %ebx, %ebx
         xorl    %edx, %edx
@@ -103,6 +103,12 @@ resetValues:
         # popl  %destination registry
         movl    $25, (%ebx)
         movl    $25, 4(%ebx)
+
+        #temporarily try and add size+1 to the worm
+        movl    $1, %edx
+        movl    $25, (%ebx, %edx, 8)
+        movl    $26, 4(%ebx, %edx, 8)
+        xorl    %edx, %edx
 
         jmp print_worm_middle
 
@@ -134,14 +140,16 @@ wLoop:  cmpl    $0, %ecx
         cmpl    $260, %eax #checks if left arrow has been pushed down
         je      kbd_polling_left
 
-        cmpl    $261, %eax #checks if left arrow has been pushed down
-        je      kbd_polling_right
+        # cmpl    $261, %eax #checks if left arrow has been pushed down
+        # je      kbd_polling_right
 
-        cmpl    $259, %eax #checks if left arrow has been pushed down
-        je      kbd_polling_up
+        # cmpl    $259, %eax #checks if left arrow has been pushed down
+        # je      kbd_polling_up
 
-        cmpl    $258, %eax #checks if left arrow has been pushed down
-        je      kbd_polling_down
+        # cmpl    $258, %eax #checks if left arrow has been pushed down
+        # je      kbd_polling_down
+
+        call    restore_counter
 
         call    no_input
 
@@ -155,8 +163,6 @@ wLoop:  cmpl    $0, %ecx
 
         #restores counter after c-call
         movl    404(%ebx), %ecx
-
-
 
         jmp     wLoop
 
@@ -192,6 +198,25 @@ kbd_polling_left:
         #Clean up stack
         addl    $12, %esp
 
+
+        #moves temporary value for counter back into %ecx registry
+        movl    404(%ebx), %ecx
+
+        #resets registry in preparation for worm body parts update
+        call    reset_registry
+
+        #loads variables into registry again for statement comparison
+        leal    wormSize, %edx
+        incl    408(%ebx)
+        movl    408(%ebx), %ecx
+        cmpl    408(%ebx), %edx
+        #update worm body positions if it has any body parts
+        call    update_body_parts_left
+
+        #resets the wormSize counter for future updates can be executed correctly
+        call    reset_wormSize_counter
+
+        call    reset_registry
         #moves temporary value for counter back into %edx registry
         movl    404(%ebx), %ecx
 
@@ -343,6 +368,83 @@ no_input:
         movl    404(%ebx), %ecx
         # cmpl    $261, %eax
         # je      kbd_polling_right
+        ret
+
+save_counter:
+        movl    $0, 404(%ebx)
+        movl    %ecx, 404(%ebx)
+        ret
+
+restore_counter:
+        movl    404(%ebx), %ecx
+        ret
+# update_worm_body_positions:
+
+#         cmpl last_position, $260
+#         je update_left
+
+#         cmpl  last_position, $261
+#         je  update_right
+
+#         cmpl last_position, $259
+#         je  update_up
+
+#         cmpl last_position, $258
+#         je update_down
+
+#         ret
+
+reset_registry:
+        xorl    %ecx, %ecx
+        xorl    %edx, %edx
+        xorl    %eax, %eax
+        ret
+
+update_body_parts_left:
+
+        #removes old coordinates for current piece of worm tail
+        pushl   $32
+        pushl   4(%ebx, %ecx, 8)
+        pushl   (%ebx, %ecx, 8);
+        call    nib_put_scr
+
+        #cleanup stack
+        addl    $12, %esp
+
+        call    reset_registry
+        #loads variables into registry again for statement comparison
+        movl    408(%ebx), %ecx
+        leal    wormSize, %edx
+
+
+        #increments x-coordinate (moves left)
+        incl    (%ebx, %ecx, 8)
+
+        pushl   $wormChar
+        pushl   4(%ebx, %ecx, 8)
+        pushl   (%ebx, %ecx, 8)
+        call    nib_put_scr
+
+        #cleanup stack
+        addl    $12, %esp
+
+
+        #increases wormSize counter
+        incl    408(%ebx)
+
+        leal    wormSize, %edx
+        movl    408(%ebx), %ecx
+        #if worm still has body parts to update, then it will loop again
+        #maybe reverse these statements?
+        cmpl    408(%ebx), %edx
+        ja      update_body_parts_left
+
+        #else, return back to last code
+        ret
+
+#maybe unecessary
+reset_wormSize_counter:
+        movl    $0, 408(%ebx)
         ret
 
  finish_loop:
