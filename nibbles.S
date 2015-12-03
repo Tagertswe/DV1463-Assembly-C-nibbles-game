@@ -911,6 +911,20 @@ finish_body_part_update:
         jmp     wLoop
 
 
+body_hit_detection_init:
+        xorl    %eax, %eax
+        xorl    %edx, %edx
+
+collision_detect:
+        4(%ebx, %ecx, 8)
+        (%ebx, %ecx, 8)
+        incl    counter
+        cmpl    
+
+        #head x == X body part
+        #head y == Y body part
+        #then call finish_loop
+        #else ret
 
 #maybe unecessary
 reset_wormSize_counter:
