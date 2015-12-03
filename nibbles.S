@@ -107,7 +107,7 @@ resetValues:
         #temporarily try and add size+1 to the worm
         movl    $1, %edx
         movl    $25, (%ebx, %edx, 8)
-        movl    $26, 4(%ebx, %edx, 8)
+        movl    $25, 4(%ebx, %edx, 8)
         xorl    %edx, %edx
 
         jmp print_worm_middle
@@ -181,10 +181,78 @@ kbd_polling_left:
         #restores the counter value
         movl    404(%ebx), %ecx
 
-        #decrements the counter value, as well as the X-coordinate
-        decl    %ecx
         #X-coordinate
         decl    (%ebx)
+
+        #increase boundary counter
+        decl    %ecx
+
+        #saves counter before c-call
+        movl    %ecx, 404(%ebx)
+
+        xorl    %eax, %eax
+        movl    4(%ebx), %eax
+
+
+        pushl   $wormChar
+        pushl   4(%ebx)
+        pushl   (%ebx)
+        #pushl   $65
+        call nib_put_scr
+
+        #Clean up stack
+        addl    $12, %esp
+
+
+        #moves temporary value for counter back into %ecx registry
+        movl    404(%ebx), %ecx
+
+        #resets registry in preparation for worm body parts update
+        call    reset_registry
+
+        #loads variables into registry again for statement comparison
+        #loads body size
+        xorl    %edx, %edx
+        movl    $wormSize, %edx
+        #increments to body position 1
+        movl    $0, 408(%ebx)
+     
+        #moves body pos 1 to ecx
+        xorl    %ecx, %ecx
+        movl    408(%ebx), %ecx
+        incl    %ecx
+        movl    %ecx, 408(%ebx)
+        #if the the worm really has a body part at pos 1 then it will start update
+        cmpl    %ecx, %edx
+        #update worm body positions if it has any body parts
+        jge      update_body_parts_left
+
+        #moves temporary value for counter back into %ecx registry
+        movl    404(%ebx), %ecx
+
+        jmp wLoop
+
+
+kbd_polling_right:
+        movl    $261, last_position
+
+        #removes old worm position
+        pushl   $32
+        pushl   4(%ebx)
+        pushl   (%ebx)
+        call nib_put_scr
+
+        #Clean up stack
+        addl    $12, %esp
+
+        #restores the counter value
+        movl    404(%ebx), %ecx
+
+        #X-coordinate
+        incl    (%ebx)
+
+        #increase boundary counter
+        incl    %ecx
 
         #saves counter before c-call
         movl    %ecx, 404(%ebx)
@@ -206,56 +274,19 @@ kbd_polling_left:
         call    reset_registry
 
         #loads variables into registry again for statement comparison
-        leal    wormSize, %edx
+        #loads body size
+        movl    $wormSize, %edx
+        #increments to body position 1
+
         incl    408(%ebx)
+        #moves body pos 1 to ecx
         movl    408(%ebx), %ecx
+        #if the the worm really has a body part at pos 1 then it will start update
         cmpl    408(%ebx), %edx
         #update worm body positions if it has any body parts
-        call    update_body_parts_left
+        jge      update_body_parts_right
 
-        #resets the wormSize counter for future updates can be executed correctly
-        call    reset_wormSize_counter
-
-        call    reset_registry
-        #moves temporary value for counter back into %edx registry
-        movl    404(%ebx), %ecx
-
-        jmp wLoop
-
-
-kbd_polling_right:
-        movl    $261, last_position
-
-        #removes old worm position
-        pushl   $32
-        pushl   4(%ebx)
-        pushl   (%ebx)
-        call nib_put_scr
-
-        #Clean up stack
-        addl    $12, %esp
-
-        #restores the counter value
-        movl    404(%ebx), %ecx
-
-        #decrements the counter value, as well as the X-coordinate
-        incl    %ecx
-        #X-coordinate
-        incl   (%ebx)
-
-        #saves counter before c-call
-        movl    %ecx, 404(%ebx)
-
-
-        pushl   $wormChar
-        pushl   4(%ebx)
-        pushl   (%ebx)
-        call nib_put_scr
-
-        #Clean up stack
-        addl    $12, %esp
-
-        #moves temporary value for counter back into %edx registry
+        #moves temporary value for counter back into %ecx registry
         movl    404(%ebx), %ecx
 
         jmp wLoop
@@ -356,14 +387,14 @@ no_input:
         cmpl    $260, last_position
         je      kbd_polling_left
 
-        cmpl    $261, last_position
-        je      kbd_polling_right
+        # cmpl    $261, last_position
+        # je      kbd_polling_right
 
-        cmpl    $259, last_position
-        je      kbd_polling_up
+        # cmpl    $259, last_position
+        # je      kbd_polling_up
 
-        cmpl    $258, last_position #checks if left arrow has been pushed down
-        je      kbd_polling_down
+        # cmpl    $258, last_position #checks if left arrow has been pushed down
+        # je      kbd_polling_down
 
         movl    404(%ebx), %ecx
         # cmpl    $261, %eax
@@ -414,15 +445,112 @@ update_body_parts_left:
         call    reset_registry
         #loads variables into registry again for statement comparison
         movl    408(%ebx), %ecx
+        xorl    %edx, %edx
         leal    wormSize, %edx
 
 
-        #increments x-coordinate (moves left)
-        incl    (%ebx, %ecx, 8)
+        #updates position of worm body
+        xorl    %eax,%eax
+        #fetches current pos
+        movl    %ecx, %eax
+        #subtracts 1 from current body part position
+        decl    %eax
+
+
+        /* currentPos-1 value + 1 */
+
+
+        movl    $0, %edx
+        #fetches element of currentPos-1
+        movl    (%ebx, %eax, 8), %edx
+
+        # head x-coord value - currentPos-1 element plus 1
+        # (base case 25+1 for body part 1)
+        incl    %edx
+        movl    %edx, (%ebx, %ecx, 8)
+
+     #   subl   $1, (%ebx, %ecx, 8)
 
         pushl   $wormChar
+        pushl    4(%ebx, %ecx, 8)
+       # pushl   $27
+       # pushl   (%ebx, %ecx, 8)
+        pushl   %edx
+        call    nib_put_scr
+
+        #cleanup stack
+        addl    $12, %esp
+
+        #increases wormSize counter
+        movl    408(%ebx), %ecx
+        incl    %ecx
+        movl    %ecx, 408(%ebx)
+
+
+
+        xorl    %edx, %edx
+        movl    $wormSize, %edx
+       # movl    408(%ebx), %ecx
+        #if worm still has body parts to update, then it will loop again
+        #maybe reverse these statements?
+        cmpl    %ecx, %edx
+        ja      update_body_parts_left
+
+        #else, return back to last code
+        je      finish_body_part_update
+
+
+
+
+
+
+
+update_body_parts_right:
+
+        #removes old coordinates for current piece of worm tail
+        pushl   $32
         pushl   4(%ebx, %ecx, 8)
-        pushl   (%ebx, %ecx, 8)
+        pushl   (%ebx, %ecx, 8);
+        call    nib_put_scr
+
+        #cleanup stack
+        addl    $12, %esp
+
+        call    reset_registry
+        #loads variables into registry again for statement comparison
+        movl    408(%ebx), %ecx
+        leal    wormSize, %edx
+
+
+        #updates position of worm body
+        xorl    %eax,%eax
+        #fetches current pos
+        movl    %ecx, %eax
+        #subtracts 1 from current body part position
+        subl    $1, %eax
+
+
+        /* currentPos-1 value - 1 */
+        #head = 25
+        #svans = 24 (25-1 = 24)
+        #svans2 = 23 (24-1 = 23)
+
+
+        movl    $0, %edx
+        #fetches element of currentPos-1
+        movl    (%ebx, %eax, 8), %edx
+
+        # head x-coord value - currentPos-1 element minus 1
+        # (base case 25-1 for body part 1)
+        decl    %edx
+        movl    %edx, (%ebx, %ecx, 8)
+
+     #   subl   $1, (%ebx, %ecx, 8)
+
+        pushl   $wormChar
+        pushl    4(%ebx, %ecx, 8)
+       # pushl   (%ebx, %ecx, 8)
+        pushl   %edx
         call    nib_put_scr
 
         #cleanup stack
@@ -432,15 +560,31 @@ update_body_parts_left:
         #increases wormSize counter
         incl    408(%ebx)
 
-        leal    wormSize, %edx
-        movl    408(%ebx), %ecx
+        xorl    %edx, %edx
+        movl    $wormSize, %edx
+       # movl    408(%ebx), %ecx
         #if worm still has body parts to update, then it will loop again
         #maybe reverse these statements?
         cmpl    408(%ebx), %edx
-        ja      update_body_parts_left
+        ja      update_body_parts_right
 
         #else, return back to last code
-        ret
+        je      finish_body_part_update
+
+
+
+
+
+finish_body_part_update:
+        #resets the wormSize counter for future updates can be executed correctly
+        call    reset_wormSize_counter
+
+        call    reset_registry
+        xorl    %ecx, %ecx
+        movl    404(%ebx), %ecx
+        jmp     wLoop
+
+
 
 #maybe unecessary
 reset_wormSize_counter:
