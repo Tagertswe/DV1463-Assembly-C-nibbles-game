@@ -17,7 +17,8 @@ array:  .space 410
 counter: .long 0
 last_position: .long 0
 wormSize_counter: .long 0
-temp-Y:  .long 0
+tempY:  .long 0
+hit:    .long 0
 
 print_format:   .asciz "Value of printout: %d \n"
 .text
@@ -158,11 +159,11 @@ wLoop:  cmpl    $0, %ecx
         cmpl    $261, %eax #checks if left arrow has been pushed down
         je      kbd_polling_right
 
-        # cmpl    $259, %eax #checks if left arrow has been pushed down
-        # je      kbd_polling_up
+        cmpl    $259, %eax #checks if left arrow has been pushed down
+        je      kbd_polling_up
 
-        # cmpl    $258, %eax #checks if left arrow has been pushed down
-        # je      kbd_polling_down
+        cmpl    $258, %eax #checks if left arrow has been pushed down
+        je      kbd_polling_down
 
         call    restore_counter
 
@@ -870,11 +871,11 @@ no_input:
         cmpl    $261, last_position
         je      kbd_polling_right
 
-        # cmpl    $259, last_position
-        # je      kbd_polling_up
+        cmpl    $259, last_position
+        je      kbd_polling_up
 
-        # cmpl    $258, last_position #checks if left arrow has been pushed down
-        # je      kbd_polling_down
+        cmpl    $258, last_position #checks if left arrow has been pushed down
+        je      kbd_polling_down
 
 
         xorl    %ecx, %ecx
@@ -921,30 +922,68 @@ body_hit_detection_init:
         xorl    %ecx, %ecx
         #head y
         #need to load temp-Y into a registry
-        movl    $0, temp-Y
+        movl    $0, tempY
 
         #loads counter into %edi for easier offset access in the upcoming loop
         xorl    %edi, %edi
         leal    counter, %edi
 
-        xorl    %esi, %esi
+
         
-        #loads X and Y head coordinates into two registry
+        #copies X and Y head coordinates into two registry
+        #copy X
         movl    (%ebx, %edi,8), %ecx
-        movl    (%ebx, %edi, 8), $temp-Y
+        #copy Y
+        xorl    %esi, %esi
+        movl    4(%ebx, %edi, 8), %esi
 
 
 #work in progress, compare head x, y against current body part x, y, add +1 to esi,
-#if esi == 2, then quit program as then head is considered to have collided with its own body
+#if esi == 2, then quit program as then head is considered to
+# have collided with its own body
 collision_detect:
-        cmpl    
+        movl    $0, $hit
+        cmpl    %ecx, (%ebx, %edi, 8)
+        je      add_hit  
+collision_detect2:
+        cmpl    %esi, 4(%ebx, %edi,8)
+        je      add_hit2
+
         incl    counter
-        cmpl    
+
+        #if there's still body parts left to compare, the loop again
+        cmpl    $counter, $wormSize
+        ja      collision_detect
+
+        #else jump back to
+        jmp     
 
         #head x == X body part
         #head y == Y body part
         #then call finish_loop
         #else ret
+
+
+
+
+add_hit:
+        incl    hit
+        jmp     collision_detect2
+
+add_hit2:
+        incl    hit
+        cmpl    $hit, $2
+        je      finish_loop
+        jmp     collision_detect    
+
+reset_hits:
+        movl    $0, hit
+        ret
+
+reset_counter:
+        movl    $0, counter
+        ret
+
 
 #maybe unecessary
 reset_wormSize_counter:
