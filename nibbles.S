@@ -13,8 +13,9 @@ message: .asciz "x-cord %d y-cord %d\n"
 nrOfApples: 		.long	20	# One iteration creates x-cord second y-cord, means 20 iterations = 10 apples.
 counter: 		.long	0
 index:			.long	0
-appleCord:		.space 400	# (x,y) cordinates where the apples has been placed on screen
-tempSpace:		.space 8	# will be putting one random cordinates in this space
+appleCord:		.space 	400	# (x,y) cordinates where the apples has been placed on screen
+tempSpace:		.space 	8	# will be putting one random cordinates in this space
+borderSize:		.long	50
 
 .text
 
@@ -63,8 +64,6 @@ getRandVal:
 	xorl	%edx,%edx
 	xorl	%ecx,%ecx
 	leal	appleCord,%ebx
-	#leal	x,%edx
-	#leal	y,%ecx	
 
 getApples:
 
@@ -90,8 +89,7 @@ getApples:
 	call nib_put_scr
 	addl    $12, %esp
 	
-	cmpl	$10,counter			## loop 10 times, = nr of apples to be put on the screen
-	#decl 	counter		
+	cmpl	$10,counter			## loop 10 times, = nr of apples to be put on the screen	
 	jne 	getApples			## jne = jump if not equal
 
 
@@ -137,11 +135,11 @@ loop:
 	popl	%ebx			# pop y cord
 
 	########## print to screen ###############
-	pushl	$char
-      	pushl	%ebx
-      	pushl	%ecx
-	call nib_put_scr
-	addl    $12, %esp
+	#pushl	$char
+      	#pushl	%ebx
+      	#pushl	%ecx
+	#call nib_put_scr
+	#addl    $12, %esp
 
 	### test prints the new apple (x,y)
 	#pushl	%ecx
@@ -171,13 +169,75 @@ test:
 #	jne 	test			## jne = jump if not equal	
 #############################################################################
 
+
+
+############################### Set borders ##############################################
+
+	movl	$0,counter
+floor:
+	########## print to screen ###############
+	pushl	$45				# char (-)
+      	pushl	borderSize			# y cord
+      	pushl	counter				# x cord
+	call nib_put_scr
+	addl    $12, %esp
+	incl	counter				# increment
+
+	cmpl	$50,counter			## 
+	jne 	floor				## jne = jump if not equal	
+
+	movl	$0,counter
+rWall:
+	########## print to screen ###############
+	pushl	$124				# char (|)
+      	pushl	counter				# y cord
+      	pushl	borderSize			# x cord
+	call nib_put_scr
+	addl    $12, %esp
+	incl	counter				# increment
+
+	cmpl	$50,counter			## 
+	jne 	rWall				## jne = jump if not equal
+	
+
+	movl	$0,counter
+lWall:
+	########## print to screen ###############
+	pushl	$124				# char (|)
+      	pushl	counter				# y cord
+      	pushl	$0				# x cord
+	call nib_put_scr
+	addl    $12, %esp
+	incl	counter				# increment
+
+	cmpl	$50,counter			## 
+	jne 	lWall				## jne = jump if not equal
+	
+
+
+	movl	$0,counter
+roof:
+	########## print to screen ###############
+	pushl	$45				# char (-)
+      	pushl	$0				# y cord
+      	pushl	counter				# x cord
+	call nib_put_scr
+	addl    $12, %esp
+	incl	counter				# increment
+
+	cmpl	$50,counter			## 
+	jne 	roof				## jne = jump if not equal
+
+
+
 	pushl	$15
 	call 	sleep
 	addl	$4,%esp
 
-	call nib_end	
+	call 	nib_end	
 	call 	exit
 	
+
 
 
 
