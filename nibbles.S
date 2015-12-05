@@ -17,7 +17,8 @@ array:  .space 410
 counter: .long 0
 last_position: .long 0
 wormSize_counter: .long 0
-tempY:  .long 0
+Y:  .long 0
+X:  .long 0
 hit:    .long 0
 
 print_format:   .asciz "Value of printout: %d \n"
@@ -156,18 +157,18 @@ wLoop:  cmpl    $0, %ecx
         cmpl    $260, %eax #checks if left arrow has been pushed down
         je      kbd_polling_left
 
-        cmpl    $261, %eax #checks if left arrow has been pushed down
-        je      kbd_polling_right
+        # cmpl    $261, %eax #checks if left arrow has been pushed down
+        # je      kbd_polling_right
 
-        cmpl    $259, %eax #checks if left arrow has been pushed down
-        je      kbd_polling_up
+        # cmpl    $259, %eax #checks if left arrow has been pushed down
+        # je      kbd_polling_up
 
-        cmpl    $258, %eax #checks if left arrow has been pushed down
-        je      kbd_polling_down
+        # cmpl    $258, %eax #checks if left arrow has been pushed down
+        # je      kbd_polling_down
 
         call    restore_counter
 
-        call    no_input
+       # call    no_input
 
         # about 1 second delay for worm position update
         movl    %ecx, 404(%ebx)
@@ -230,6 +231,14 @@ kbd_polling_left:
 
         #Clean up stack
         addl    $12, %esp
+###################################################
+
+#######################body collission detection##
+        call body_hit_detection_init
+
+        #restores the boundary counter value
+        xorl    %ecx, %ecx
+        movl    404(%ebx), %ecx
 ###################################################
 
 ####################body part update preparation#########
@@ -917,69 +926,83 @@ body_hit_detection_init:
         #current body x
         xorl    %eax, %eax
         #current body y
+        xorl    %esi, %esi
+        #counter
         xorl    %edx, %edx
         #head x
-        xorl    %ecx, %ecx
+        pushl   $X
         #head y
-        #need to load temp-Y into a registry
-        movl    $0, tempY
+        pushl   $Y
+
+
 
         #loads counter into %edi for easier offset access in the upcoming loop
-        xorl    %edi, %edi
-        leal    counter, %edi
+        leal    counter, %edx
 
 
-        
-        #copies X and Y head coordinates into two registry
+    
         #copy X
-        movl    (%ebx, %edi,8), %ecx
+        #mjau
+        movl    (%ebx, %edx,8), %esp
         #copy Y
-        xorl    %esi, %esi
-        movl    4(%ebx, %edi, 8), %esi
+        movl    4(%ebx, %edx, 8), 4(%esp)
+
+        #copy counter to registry
+        leal    counter, %edx
+
+        jmp collision_detect
 
 
 #work in progress, compare head x, y against current body part x, y, add +1 to esi,
 #if esi == 2, then quit program as then head is considered to
 # have collided with its own body
+##################body collission detection################################
 collision_detect:
         movl    $0, hit
-        cmpl    %ecx, (%ebx, %edi, 8)
+        pushl   $hit
+        cmpl    %ecx, (%ebx, %edx, 8)
         je      add_hit  
 collision_detect2:
-        cmpl    %esi, 4(%ebx, %edi,8)
+        cmpl    %esi, 4(%ebx, %edx,8)
         je      add_hit2
 
+continue:
         incl    counter
-
+        popl    hit
         #if there's still body parts left to compare, the loop again
-        cmpl    counter, wormSize
+        cmpl    %edx, wormSize
         ja      collision_detect
 
         #else jump back to
-        jmp     ret
-
-        #head x == X body part
-        #head y == Y body part
-        #then call finish_loop
-        #else ret
+        ret
 
 
 
 
 add_hit:
+        #pops hit from stack
+        popl    hit
+        #increments hit
         incl    hit
-        pushl   hitting
+        #pushes update of hit to stack
+        pushl   hit
+
         jmp     collision_detect2
 
 add_hit2:
         incl    hit
-        cmpl    hit, $2
+        #compares if there are two hits
+        cmpl    $2, 4(%esp)
+        #if so, then finish program
         je      finish_loop
-        jmp     collision_detect    
+        #else, continue with checking
+        jmp     continue
 
 reset_hits:
         movl    $0, hit
         ret
+##################################################
+
 
 reset_counter:
         movl    $0, counter
@@ -992,6 +1015,7 @@ reset_wormSize_counter:
         ret
 
  finish_loop:
+        popl    hit
         jmp exit_program
 
  exit_program:       
