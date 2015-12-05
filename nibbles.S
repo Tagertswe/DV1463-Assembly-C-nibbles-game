@@ -942,7 +942,7 @@ body_hit_detection_init:
 #if esi == 2, then quit program as then head is considered to
 # have collided with its own body
 collision_detect:
-        movl    $0, $hit
+        movl    $0, hit
         cmpl    %ecx, (%ebx, %edi, 8)
         je      add_hit  
 collision_detect2:
@@ -952,11 +952,11 @@ collision_detect2:
         incl    counter
 
         #if there's still body parts left to compare, the loop again
-        cmpl    $counter, $wormSize
+        cmpl    counter, wormSize
         ja      collision_detect
 
         #else jump back to
-        jmp     
+        jmp     ret
 
         #head x == X body part
         #head y == Y body part
@@ -968,11 +968,12 @@ collision_detect2:
 
 add_hit:
         incl    hit
+        pushl   hitting
         jmp     collision_detect2
 
 add_hit2:
         incl    hit
-        cmpl    $hit, $2
+        cmpl    hit, $2
         je      finish_loop
         jmp     collision_detect    
 
