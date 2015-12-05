@@ -157,18 +157,18 @@ wLoop:  cmpl    $0, %ecx
         cmpl    $260, %eax #checks if left arrow has been pushed down
         je      kbd_polling_left
 
-        # cmpl    $261, %eax #checks if left arrow has been pushed down
-        # je      kbd_polling_right
+        cmpl    $261, %eax #checks if left arrow has been pushed down
+        je      kbd_polling_right
 
-        # cmpl    $259, %eax #checks if left arrow has been pushed down
-        # je      kbd_polling_up
+        cmpl    $259, %eax #checks if left arrow has been pushed down
+        je      kbd_polling_up
 
-        # cmpl    $258, %eax #checks if left arrow has been pushed down
-        # je      kbd_polling_down
+        cmpl    $258, %eax #checks if left arrow has been pushed down
+        je      kbd_polling_down
 
         call    restore_counter
 
-       # call    no_input
+        call    no_input
 
         # about 1 second delay for worm position update
         movl    %ecx, 404(%ebx)
@@ -187,7 +187,7 @@ wLoop:  cmpl    $0, %ecx
 
 
 kbd_polling_left:
-        #checks last known positis
+        #set last known position to LEFT
         movl    $260, last_position
         #restores position of boundary counter
         xorl    %ecx, %ecx
@@ -238,8 +238,14 @@ kbd_polling_left:
 
         #restores the boundary counter value
         xorl    %ecx, %ecx
+        xorl    %eax, %eax
         movl    404(%ebx), %ecx
+
+        #set last known position to LEFT
+        movl    $260, last_position
 ###################################################
+
+
 
 ####################body part update preparation#########
 
@@ -267,6 +273,9 @@ kbd_polling_left:
 
         #update worm body positions if it has any body parts
         jge      update_body_parts_left
+
+
+
 
         #moves temporary value for boundary counter back into %ecx registry
         movl    404(%ebx), %ecx
@@ -396,7 +405,6 @@ kbd_polling_right:
 
 
 #################PRINT TO SCREEN################
-        ###################The y-coordinate gets corrupted, not sure why
         pushl   $wormChar
         pushl   4(%ebx)
         pushl   (%ebx)
@@ -404,6 +412,17 @@ kbd_polling_right:
 
         #Clean up stack
         addl    $12, %esp
+###################################################
+
+#######################body collission detection##
+        call body_hit_detection_init
+
+        #restores the boundary counter value
+        xorl    %ecx, %ecx
+        movl    404(%ebx), %ecx
+
+        #set last known position to RIGHT
+        movl    $261, last_position
 ###################################################
 
 ####################body part update preparation#########
@@ -432,6 +451,8 @@ kbd_polling_right:
 
         #update worm body positions if it has any body parts
         jge      update_body_parts_right
+
+  
 
         #moves temporary value for boundary counter back into %ecx registry
         movl    404(%ebx), %ecx
@@ -527,7 +548,7 @@ update_body_parts_right:
 
 kbd_polling_up:
 
-        #checks last known positis
+        #checks last known position to up
         movl    $259, last_position
         #restores position of boundary counter
         xorl    %ecx, %ecx
@@ -570,6 +591,18 @@ kbd_polling_up:
 
         #Clean up stack
         addl    $12, %esp
+###################################################
+
+
+#######################body collission detection##
+        call body_hit_detection_init
+
+        #restores the boundary counter value
+        xorl    %ecx, %ecx
+        movl    404(%ebx), %ecx
+
+        #set last known position to UP
+        movl    $259, last_position
 ###################################################
 
 ####################body part update preparation#########
@@ -735,6 +768,17 @@ kbd_polling_down:
 
         #Clean up stack
         addl    $12, %esp
+###################################################
+
+#######################body collission detection##
+        call body_hit_detection_init
+
+        #restores the boundary counter value
+        xorl    %ecx, %ecx
+        movl    404(%ebx), %ecx
+
+        #set last known position to UP
+        movl    $258, last_position
 ###################################################
 
 ####################body part update preparation#########
@@ -921,91 +965,93 @@ finish_body_part_update:
 
         jmp     wLoop
 
-
+##################body collission detection################################
 body_hit_detection_init:
-        #current body x
-        xorl    %eax, %eax
-        #current body y
-        xorl    %esi, %esi
-        #counter
+        #clear counter
         xorl    %edx, %edx
-        #head x
-        pushl   $X
-        #head y
-        pushl   $Y
+        #uses edx for storing the counter for iteration through the body parts 
+        #for x, y coord checking.
 
+        #uses offset 416 for storing the number of hits for each iteration through the worm body
+        movl    $0, 416(%ebx)
 
-
-        #loads counter into %edi for easier offset access in the upcoming loop
-        leal    counter, %edx
-
-
+        #loads wormSize into offset 412 of ebx
+        # movl    $0, 412(%ebx)
+        # leal    wormSize, 412(%ebx)
     
-        #copy X
-        #mjau
-        movl    (%ebx, %edx,8), %esp
-        #copy Y
-        movl    4(%ebx, %edx, 8), 4(%esp)
+        #copy head X
+        xorl    %eax, %eax
+        movl   (%ebx, %edx,8), %eax
+        #copy head Y 
+        xorl    %ecx, %ecx
+        movl   4(%ebx, %edx, 8), %ecx
 
-        #copy counter to registry
-        leal    counter, %edx
+        #sets body counter to 1, for first body part comparison
+        movl    $1, %edx
+
 
         jmp collision_detect
 
-
-#work in progress, compare head x, y against current body part x, y, add +1 to esi,
-#if esi == 2, then quit program as then head is considered to
-# have collided with its own body
-##################body collission detection################################
+#compares X coordinate
 collision_detect:
-        movl    $0, hit
-        pushl   $hit
-        cmpl    %ecx, (%ebx, %edx, 8)
-        je      add_hit  
-collision_detect2:
-        cmpl    %esi, 4(%ebx, %edx,8)
-        je      add_hit2
+        #set hit to 0
+        movl    $0, 416(%ebx)
 
+        #if X coordinates are on the same spot, go to add_hit and increment hit number
+        cmpl    %eax, (%ebx, %edx, 8)
+        je      add_hit
+#compares Y coordinate  
+collision_detect2:
+        #if Y cooridnates are on the same spot, go to add_hit2 and increment hit number
+        cmpl    %ecx, 4(%ebx, %edx,8)
+        je      add_hit2
+#go back here and continue loop if hit != 2.
 continue:
-        incl    counter
-        popl    hit
-        #if there's still body parts left to compare, the loop again
-        cmpl    %edx, wormSize
+        #increments counter
+        incl    %edx
+
+        #if there's still body parts left to compare, if it is, then loop again
+        #wormSize = 412(%ebx), counter = %edx
+        cmpl    $wormSize, %edx
         ja      collision_detect
 
-        #else jump back to
+        #else jump back to function body_hit_detection_init was called from
         ret
 
 
 
 
 add_hit:
-        #pops hit from stack
-        popl    hit
+
         #increments hit
-        incl    hit
-        #pushes update of hit to stack
-        pushl   hit
+        incl    416(%ebx)
 
         jmp     collision_detect2
 
 add_hit2:
-        incl    hit
+
+        #increments hit
+        incl    416(%ebx)
+
         #compares if there are two hits
-        cmpl    $2, 4(%esp)
+        cmpl    $2, 416(%ebx)
         #if so, then finish program
-        je      finish_loop
+        je      body_collide
         #else, continue with checking
         jmp     continue
 
 reset_hits:
-        movl    $0, hit
+        movl    $0, 416(%ebx)
         ret
 ##################################################
 
+#finish body collission detection of both x and y coordinates are the same with head as
+#one of the body parts it collides with.
+body_collide:
+        jmp     exit_program
 
 reset_counter:
-        movl    $0, counter
+        movl    $0, 412(%ebx)
         ret
 
 
@@ -1015,7 +1061,6 @@ reset_wormSize_counter:
         ret
 
  finish_loop:
-        popl    hit
         jmp exit_program
 
  exit_program:       
