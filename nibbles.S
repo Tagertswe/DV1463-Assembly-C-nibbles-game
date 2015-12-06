@@ -9,7 +9,11 @@
 
 
 .data
-message: .asciz "x-cord %d y-cord %d\n"
+message: 	.asciz "x-cord %d y-cord %d\n"
+cmpMessage1: 	.asciz "Worm head cordinate x,y (%d,%d)\n"
+cmpMessage2: 	.asciz "Apple cordinate x,y (%d,%d)\n"
+counterValue:	.asciz "Counter value is: %d\n"
+
 nrOfApples: 		.long	20	# One iteration creates x-cord second y-cord, means 20 iterations = 10 apples.
 counter: 		.long	0
 index:			.long	0
@@ -55,7 +59,7 @@ getRandVal:
 	cmpl	counter,%ecx		## comparison is based on  nrOfApples - counter
 	jne 	getRandVal		## jne = jump if not equal
 
-#jmp	printOneApple
+#jmp	acd
 
 ############################### Print apples to screen  ##################################################
 
@@ -150,23 +154,23 @@ loop:
 
 
 ################### TEST prints all apples (x,y) plus one new #################
-#	movl 	$0,counter
-#	xorl	%ebx,%ebx
-#	leal	appleCord,%ebx
-test:
+	#movl 	$0,counter
+	#xorl	%ebx,%ebx
+	#leal	appleCord,%ebx
+#test:
 
-#	pushl	(%ebx)
-#	addl	$4,%ebx
-#	pushl	(%ebx)
-#	addl	$4,%ebx
-#	pushl	$message
-#	call	printf
-#	addl	$12,%esp
+	#pushl	(%ebx)
+	#addl	$4,%ebx
+	#pushl	(%ebx)
+	#addl	$4,%ebx
+	#pushl	$message
+	#call	printf
+	#addl	$12,%esp
 
-#	incl	counter
+	#incl	counter
 	
-#	cmpl	$11,counter		## 
-#	jne 	test			## jne = jump if not equal	
+	#cmpl	$11,counter		## 
+	#jne 	test			## jne = jump if not equal	
 #############################################################################
 
 
@@ -229,25 +233,108 @@ roof:
 	jne 	roof				## jne = jump if not equal
 
 
+	
 
-	pushl	$15
+
+
+##################### Apple collision detection #########################
+
+acd:	
+	xorl	%ebx,%ebx	
+	xorl	%ecx,%ecx
+	xorl	%edx,%edx
+	movl 	$0,counter
+
+	
+	########## Set fake (x,y) cordinates just for testing
+	leal	tempSpace,%ebx
+	movl	$36,(%ebx)
+	addl	$4,%ebx
+	movl	$42,(%ebx)
+	subl	$4,%ebx	
+	
+	#pushl	(%ebx)
+	#push	4(%ebx)
+	#pushl	$message
+	#call	printf
+	#addl	$12,%esp
+	####################################################
+
+	### Division  index/2 = nr of apples. (x,y) cords ######
+	movl	index,%eax
+	movl	$2,%ecx			## modulo with value 2
+	divl	%ecx			## result = eax  , rest = edx  (eax/värde)
+	### the result from the division is in reg eax
+
+	xorl	%ecx,%ecx
+	movl	%ebx,%ecx		## snake head cords is in %ecx
+	leal	appleCord,%ebx		## apple cords is now in %ebx
+	xorl	%edx,%edx
+
+loop1:
+	
+	incl	counter
+	pushl	%eax			## push index value to stack
+
+	### compare x cords
+	xorl	%edx,%edx
+	movl	(%ecx),%edx		## move worm x cord to %edx
+	cmpl	(%ebx),%edx		## compare apple x with worm x
+	jne	iterate			## jump if not equal, if both x is not the same jump to iterate.
+	
+	### compare y cords
+	xorl	%edx,%edx
+	movl	4(%ecx),%edx		## move worm y cord to %edx
+	cmpl	4(%ebx),%edx		## compare apple y with worm y
+	jne	iterate			## jump if not equal, if both y is not the same jump to iterate.
+	
+	###### if here then its a hit!! ###### 
+
+	
+	### print blank to screen
+	pushl	$43				# char (+)
+      	pushl	$4(%ebx)			# y cord
+      	pushl	$(%ebx)				# x cord
+	call nib_put_scr
+	addl    $12, %esp
+
+	#pushl	4(%ebx)
+	#pushl	(%ebx)
+	#pushl	$cmpMessage2
+	#call	printf
+	#addl	$12,%esp
+
+	## zeroing the cordinates
+	movl	$0,(%ebx)	
+	movl	$0,4(%ebx)
+
+	#pushl	counter
+	#pushl	$counterValue
+	#call	printf
+	#addl	$8,%esp
+	jmp	end	
+
+		
+
+iterate:
+	addl	$8,%ebx			## move 8 bytes forward in apple array
+	popl	%eax			## pop back index value to stack
+	cmpl	%eax,counter			
+	jne 	loop1			## jne = jump if not equal
+
+end:
+	##ret
+
+
+################################################
+ 	/* Finishing calls */
+
+	pushl	$8
 	call 	sleep
 	addl	$4,%esp
 
 	call 	nib_end	
 	call 	exit
-	
 
-
-
-
-/*RUN WORM WITH CONDITIONS HERE IN LOOP*/
-
-
-
-
-
-
-        /* Finishing calls */
-        //call nib_end
-        call exit
+  
+       
