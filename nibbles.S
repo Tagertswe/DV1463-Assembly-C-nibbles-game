@@ -147,7 +147,8 @@ wLoop:  cmpl    $0, %ecx
 
         call    restore_counter
 
-     #   call    no_input
+        #currently automated direction input doesnt work, based on last key arrow press
+        #call    no_input
 
         # about 1 second delay for worm position update
         #movl    %ecx, 404(%ebx)
@@ -294,6 +295,12 @@ update_tail_init:
         cmpl    $261, last_position
         je      update_tail_right
 
+        #up
+        cmpl    $259, last_position
+        je      update_tail_up
+        #down
+        cmpl    $258, last_position
+        je      update_tail_down
 
         
         pushl   $loopDelay
@@ -302,13 +309,6 @@ update_tail_init:
         #cleanup stack
         addl    $4, %esp
 
-
-        # #up
-        # cmpl    $259, last_position
-        # je      update_tail_up
-        # #down
-        # cmpl    $258, last_position
-        # je      update_tail_down
         ret
 
 
@@ -342,7 +342,7 @@ update_tail_right:
         movl    (%ebx, %eax, 8), %edx
 
         # head x-coord value - currentPos-1 element plus 1
-        incl    %edx
+        decl    %edx
         #saves decremented coord back to the current tail position.
         movl    %edx, (%ebx, %ecx, 8)
 
@@ -357,6 +357,7 @@ update_tail_right:
 ###################################################
         # xorl    %ecx, %ecx
         # movl    404(%ebx), %ecx
+        ret
 
         movl    $260, last_position
         #make sure last_position is saved somewhere safe and can be restored later in the move
@@ -546,7 +547,7 @@ move_no_input:
 ###################################################
 
 #######################body collission detection##
-     #   call body_hit_detection_init
+        call body_hit_detection_init
 
         #restores the boundary counter value
         xorl    %ecx, %ecx
