@@ -13,11 +13,12 @@ message: 	.asciz "x-cord %d y-cord %d\n"
 cmpMessage1: 	.asciz "Worm head cordinate x,y (%d,%d)\n"
 cmpMessage2: 	.asciz "Apple cordinate x,y (%d,%d)\n"
 counterValue:	.asciz "Counter value is: %d\n"
+parMessage:	.asciz	"Snakelength: %d and nrOfApples: %d\n"
 
-nrOfApples: 		.long	20	# One iteration creates x-cord second y-cord, means 20 iterations = 10 apples.
+nrOfApples: 		.long	0	# One iteration creates x-cord second y-cord, means 20 iterations = 10 apples.
 counter: 		.long	0
 index:			.long	0
-appleCord:		.space 	400	# (x,y) cordinates where the apples has been placed on screen
+appleCord:		.space 	4000	# (x,y) cordinates where the apples has been placed on screen
 tempSpace:		.space 	8	# will be putting one random cordinates in this space
 borderSize:		.long	50
 
@@ -25,7 +26,22 @@ borderSize:		.long	50
 
 .globl start_game
 .type start_game,@function
-start_game:
+start_game:	
+
+	popl	%ebx 	# crap push
+	popl	%ecx	#  snake length
+	popl	%edx	#  nr of apples
+
+	imull $2,%edx	# multiply with 2
+	movl	%edx,nrOfApples
+
+	#pushl	nrOfApples	
+	#pushl	nrOfApples
+	#pushl	$parMessage
+	#call	printf
+	#addl	$12,%esp
+
+
 #jmp	getRandVal
 call	nib_init
       
@@ -68,9 +84,10 @@ getRandVal:
 	xorl	%edx,%edx
 	xorl	%ecx,%ecx
 	leal	appleCord,%ebx
+	movl 	nrOfApples,%ecx		## move nr Of apples to be printed to screen
 
 getApples:
-
+	pushl	%ecx
 	xorl	%edx,%edx
 	xorl	%ecx,%ecx	
 
@@ -93,9 +110,16 @@ getApples:
 	call nib_put_scr
 	addl    $12, %esp
 	
-	cmpl	$10,counter			## loop 10 times, = nr of apples to be put on the screen	
+	popl	%ecx
+	cmpl	%ecx,counter			## loop 10 times, = nr of apples to be put on the screen	
 	jne 	getApples			## jne = jump if not equal
 
+
+	pushl	%ecx	
+	pushl	%ecx
+	pushl	$parMessage
+	call	printf
+	addl	$12,%esp
 
 ##########################################################################################################
 
@@ -293,8 +317,8 @@ loop1:
 	
 	### print blank to screen
 	pushl	$43				# char (+)
-      	pushl	$4(%ebx)			# y cord
-      	pushl	$(%ebx)				# x cord
+      	pushl	4(%ebx)			# y cord
+      	pushl	(%ebx)				# x cord
 	call nib_put_scr
 	addl    $12, %esp
 
