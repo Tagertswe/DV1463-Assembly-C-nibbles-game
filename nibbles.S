@@ -143,12 +143,14 @@ wLoop:  cmpl    $0, %ecx
         movl    %ecx, 404(%ebx)
 
         call    nib_poll_kbd
+
+        #sets direction depending on keyboard input if there are any
+        call    setting_direction
+
+        #checks input depending on what last_direction is set to
         call    check_input
 
         call    restore_counter
-
-        #currently automated direction input doesnt work, based on last key arrow press
-        #call    no_input
 
         # about 1 second delay for worm position update
         #movl    %ecx, 404(%ebx)
@@ -164,62 +166,49 @@ wLoop:  cmpl    $0, %ecx
         jmp     wLoop
 
 check_input:
-        cmpl    $260, %eax
-        je      move
-
-        cmpl    $261, %eax
-        je      move
-
-        cmpl    $259, %eax
-        je      move
-
-        cmpl    $258, %eax
-        je      move
-        ret
-
-no_input:   
-        #move left
         cmpl    $260, last_position
-        je      move_no_input
+        je      move
 
-        #move right
         cmpl    $261, last_position
-        je      move_no_input
+        je      move
 
-        #move up
         cmpl    $259, last_position
-        je      move_no_input
+        je      move
 
-        #move down
         cmpl    $258, last_position
-        je      move_no_input
+        je      move
         ret
 
-pre_direction:
-        #checks for possible arrow key input, if no input, then it will fall through and check
-        #last_position for the last arrow key that was pushed down.
+setting_direction:
         cmpl    $260, %eax
-        je      left
+        je      set_direction_left
 
         cmpl    $261, %eax
-        je      right
+        je      set_direction_right
 
         cmpl    $259, %eax
-        je      up
+        je      set_direction_up
 
         cmpl    $258, %eax
-        je      down
+        je      set_direction_down
         ret
+
+set_direction_down:
+        movl    $258, last_position
+        ret
+set_direction_up:
+        movl    $259, last_position
+        ret
+set_direction_left:
+        movl    $260, last_position
+        ret
+set_direction_right:
+        movl    $261, last_position
+        ret
+
 
 pre_direction_no_input:
 
-        # about 1 second delay for worm position update
-        # pushl   $loopDelay
-        # call    usleep
-
-        # #cleanup stack
-        # addl    $4, %esp
-
 
         cmpl    $260, last_position
         je      left
@@ -233,11 +222,9 @@ pre_direction_no_input:
         cmpl    $258, last_position
         je      down
 
-        jmp     wLoop
+        ret
 
 left:
-        movl    $260, last_position
-
         #make sure last_position is saved somewhere safe and can be restored later in the move
         #function
         xorl    %edx, %edx
@@ -247,9 +234,9 @@ left:
         decl    (%ebx)
         decl     %ecx
         decl    404(%ebx)
+        movl    404(%ebx), %ecx
         ret
 right:
-        movl    $261, last_position
         #make sure last_position is saved somewhere safe and can be restored later in the move
         #function
         xorl    %edx, %edx
@@ -259,9 +246,9 @@ right:
         incl    (%ebx)
         incl    %ecx
         incl    404(%ebx)
+        movl    404(%ebx), %ecx
         ret
 up:
-        movl    $259, last_position
         #make sure last_position is saved somewhere safe and can be restored later in the move
         #function
         xorl    %edx, %edx
@@ -271,10 +258,10 @@ up:
         decl    4(%ebx)
         decl    %ecx
         decl    404(%ebx)
+        movl    404(%ebx), %ecx
         ret    
 
 down:
-        movl    $258, last_position
         #make sure last_position is saved somewhere safe and can be restored later in the move
         #function
         xorl    %edx, %edx
@@ -284,6 +271,7 @@ down:
         incl    4(%ebx)
         incl    %ecx
         incl    404(%ebx)
+        movl    404(%ebx), %ecx
         ret
 
 
@@ -311,6 +299,18 @@ update_tail_init:
 
         ret
 
+#maybe need to put each direction tail update loop to a whole function
+#for each direction
+
+#try and shorten down the code so that check_input doesn't move the worm, but instead
+#just sets a last_position, and then no_input that performs the actual move.
+
+#worm update: print whole worm and its body parts, for each total movement update,
+#remove last body part position with printing a space
+
+#from left to up: update each tail part with both X, Y coordinates from former part 
+#for each move THIS SHOULD WORK, I think I only update only X for left/right, and
+#only Y for up/down
 
 update_tail_left:
 
@@ -412,8 +412,6 @@ update_tail_down:
 
 
 move:
-        #set last known position to LEFT
-       # movl    $260, last_position
         #restores position of boundary counter
         xorl    %ecx, %ecx
         movl    404(%ebx), %ecx
@@ -433,102 +431,6 @@ move:
 
 
         movl    418(%ebx), %eax
-############CALL different functions depending on direction########
-        call    pre_direction
-
-###################################################
-
-
-#################PRINT TO SCREEN################
-        pushl   $wormChar
-        pushl   4(%ebx)
-        pushl   (%ebx)
-        #pushl   $65
-        call nib_put_scr
-
-        #Clean up stack
-        addl    $12, %esp
-###################################################
-
-#######################body collission detection##
-        call body_hit_detection_init
-
-        #restores the boundary counter value
-        xorl    %ecx, %ecx
-        xorl    %eax, %eax
-        movl    404(%ebx), %ecx
-
-        #set last known position to LEFT
-      #  movl    $260, last_position
-###################################################
-
-
-
-####################body part update preparation#########
-
-        #resets registry in preparation for worm body parts update
-        call    reset_registry
-
-        #loads total wormSize
-        xorl    %edx, %edx
-        movl    $wormSize, %edx
-
-        #resets worm posCounter register
-        movl    $0, 408(%ebx)
-     
-        #copies 0 to ecx
-        xorl    %ecx, %ecx
-        movl    408(%ebx), %ecx
-        #increments ecx with +1
-        incl    %ecx
-        #copies ecx back to ebx register with 408 offset
-        movl    %ecx, 408(%ebx)
-###################################################
-
-        #if the the worm really has a body part at pos 1 then it will start update
-        cmpl    %ecx, %edx
-
-        #update worm body positions if it has any body parts
-        jge      update_body_parts
-
-
-
-
-        #moves temporary value for boundary counter back into %ecx registry
-        movl    404(%ebx), %ecx
-
-        #makes sure last_position gets the value that has been set after a key press.
-        xorl    %edx, %edx
-        movl    422(%ebx), %edx
-        movl    %edx, last_position
-
-        #jumps back to main loop
-        jmp wLoop
-
-
-
-
-move_no_input:
-        #set last known position to LEFT
-       # movl    $260, last_position
-        #restores position of boundary counter
-        xorl    %ecx, %ecx
-        movl    404(%ebx), %ecx
-
-
-###################################################
-        #removes old worm position
-        pushl   $32
-        pushl   4(%ebx)
-        pushl   (%ebx)
-        call nib_put_scr
-
-        #Clean up stack
-        addl    $12, %esp
-###################################################
-
-
-
 ############CALL different functions depending on direction########
         call    pre_direction_no_input
 
@@ -553,11 +455,7 @@ move_no_input:
         xorl    %ecx, %ecx
         xorl    %eax, %eax
         movl    404(%ebx), %ecx
-
-        #set last known position to LEFT
-      #  movl    $260, last_position
 ###################################################
-
 
 
 ####################body part update preparation#########
@@ -579,16 +477,22 @@ move_no_input:
         incl    %ecx
         #copies ecx back to ebx register with 408 offset
         movl    %ecx, 408(%ebx)
-
-        xorl    %eax, %eax
-        movl    $0, %eax
 ###################################################
+
+        #makes sure last_position gets the value that has been set after a key press.
+        xorl    %edx, %edx
+        movl    422(%ebx), %edx
+        movl    %edx, last_position
+
+        #loads total wormSize
+        xorl    %edx, %edx
+        movl    $wormSize, %edx
 
         #if the the worm really has a body part at pos 1 then it will start update
         cmpl    %ecx, %edx
 
         #update worm body positions if it has any body parts
-        jge     update_body_parts
+        jge      update_body_parts
 
 
 
@@ -596,9 +500,13 @@ move_no_input:
         #moves temporary value for boundary counter back into %ecx registry
         movl    404(%ebx), %ecx
 
+        #makes sure last_position gets the value that has been set after a key press.
+        xorl    %edx, %edx
+        movl    422(%ebx), %edx
+        movl    %edx, last_position
+
         #jumps back to main loop
-       # jmp wLoop
-        jmp     check_input
+        ret
 
 
 
@@ -678,9 +586,8 @@ update_body_parts:
         #else, return back to last code
         jle      finish_body_part_update
 
-
-
-
+        #if by any chance the above statement is not entered, there is a safeguard here.
+        ret
 
 
 save_counter:
@@ -700,9 +607,6 @@ reset_registry:
         ret
 
 
-
-
-
 finish_body_part_update:
         #resets the wormSize counter for future updates can be executed correctly
         call    reset_wormSize_counter
@@ -711,7 +615,7 @@ finish_body_part_update:
         xorl    %ecx, %ecx
         movl    404(%ebx), %ecx
 
-        jmp     wLoop
+        ret
 
 ##################body collission detection################################
 body_hit_detection_init:
@@ -722,11 +626,7 @@ body_hit_detection_init:
 
         #uses offset 416 for storing the number of hits for each iteration through the worm body
         movl    $0, 416(%ebx)
-
-        #loads wormSize into offset 412 of ebx
-        # movl    $0, 412(%ebx)
-        # leal    wormSize, 412(%ebx)
-    
+  
         #copy head X
         xorl    %eax, %eax
         movl   (%ebx, %edx,8), %eax
