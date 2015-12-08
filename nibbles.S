@@ -92,28 +92,10 @@ resetValues:
         movl    $25, 4(%ebx)
 
 
-        # movl    $1, %edx
-        # movl    $24,(%ebx, %edx,8)
-        # movl    $25, 4(%ebx, %edx, 8)
-
-
-        # pushl   4(%ebx, %edx, 8)
-        # pushl   (%ebx, %edx, 8) 
-        # pushl   $print_format
-        # call    printf
-        
-        # addl    $12, %esp
-
-
         xorl    %edx, %edx
 
         xorl    %eax, %eax
         leal    wormSize, %eax
-
-
-
-        # xorl    %eax, %eax
-        # leal    last_position, %eax
 
        # jmp     reset_worm_body
        jmp      print_worm_middle
@@ -123,12 +105,6 @@ resetValues:
 reset_worm_body:
         movl    $25, (%ebx, %edx, 8)
         movl    $25, 4(%ebx, %edx, 8)
-
-        # movl    %edx, 460(%ebx)
-
-
-
-        # movl    460(%ebx),%edx 
 
         incl    %edx
        # jumps to next body part to initialize it.
@@ -303,7 +279,7 @@ print_space_if_not_zero_coords:
 #print if both is not zero
 ###################################################
         #removes old worm position
-        pushl   $32#$35#$32
+        pushl   $32
 
         pushl   4(%ebx, %eax, 8)
         pushl   (%ebx, %eax, 8)
@@ -418,12 +394,7 @@ update_tail:
         #else return
         ret
 
-
 print_tail:
-       # xorl    %edx, %edx
-       # fetches value of currentPos X-coord to edx
-        #movl    (%ebx, %eax, 8), %edx
-
         #saves  tail counter
         movl    %eax, 440(%ebx)
 
@@ -431,12 +402,6 @@ print_tail:
 
         #restore  tail counter
         movl    440(%ebx), %eax
-
-        # pushl   4(%ebx, %eax, 8)
-        # pushl   (%ebx, %eax, 8) 
-        # pushl   $print_format
-        # call    printf
-        # addl    $12, %esp
 
         #restore  tail counter
         movl    440(%ebx), %eax
@@ -465,16 +430,6 @@ print_tail_space:
         movl    %eax, 440(%ebx)
 
         call    check_zero_coordinate
-# ################PRINT TO SCREEN##################
-#         pushl   $32#$wormChar
-#         pushl   4(%ebx, %eax, 8)
-#         pushl   (%ebx, %eax, 8)
-
-#         call    nib_put_scr
-
-#         #cleanup stack
-#         addl    $12, %esp
-# ###################################################
 
         #restore  tail counter
         movl    440(%ebx), %eax
