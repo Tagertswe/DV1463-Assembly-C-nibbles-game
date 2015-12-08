@@ -22,7 +22,7 @@ Y:  .long 0
 X:  .long 0
 hit:    .long 0
 
-print_format:   .asciz "Value of printout coordinates: %d , %d\n"
+print_format:   .asciz "%d,%d \n"
 .text
 
 .globl start_game
@@ -87,17 +87,36 @@ resetValues:
         #load array into a registry
         leal    array, %ebx
 
-        # popl  %destination registry
+        #sets default coordinates
         movl    $25, (%ebx)
         movl    $25, 4(%ebx)
+
+
+        # movl    $1, %edx
+        # movl    $24,(%ebx, %edx,8)
+        # movl    $25, 4(%ebx, %edx, 8)
+
+
+        # pushl   4(%ebx, %edx, 8)
+        # pushl   (%ebx, %edx, 8) 
+        # pushl   $print_format
+        # call    printf
+        
+        # addl    $12, %esp
+
+
+        xorl    %edx, %edx
 
         xorl    %eax, %eax
         leal    wormSize, %eax
 
+
+
         # xorl    %eax, %eax
         # leal    last_position, %eax
 
-        jmp     reset_worm_body
+       # jmp     reset_worm_body
+       jmp      print_worm_middle
 
 
 #sets original position 25,25 for worm head
@@ -107,11 +126,7 @@ reset_worm_body:
 
         # movl    %edx, 460(%ebx)
 
-        # pushl   4(%ebx, %edx, 8)
-        # pushl   (%ebx, %edx, 8) 
-        # pushl   $print_format
-        # call    printf
-        # addl    $12, %esp
+
 
         # movl    460(%ebx),%edx 
 
@@ -299,22 +314,72 @@ print_space_if_not_zero_coords:
 ###################################################
         ret
 
+####################checks if coordinates 0,0 is detected, if so,
+#### then no space will be printed###
 check_zero_coordinate:
         movl    $0, hit
         cmpl    $0, (%ebx, %eax,8)
-        je      add_zero_coord_hit   
-        cmpl    $0, 4(%ebx,%eax,8)
         je      add_zero_coord_hit
+back:   
+        cmpl    $0, 4(%ebx,%eax,8)
+        je      add_zero_coord_hit2
 
+back2:
         cmpl    $2, hit
         jne      print_space_if_not_zero_coords  
         #else return
         ret 
 
 add_zero_coord_hit:
-        incl hit
+        incl    hit
+        jmp     back
+
+add_zero_coord_hit2:
+        incl    hit
+        jmp     back2
+
+#########################################################
+
+########checks if coordinates 0,0 is detected, if so,
+#### then no space will be printed###########
+
+check_zero_coordinate_for_print:
+        movl    $0, hit
+        cmpl    $0, (%ebx, %eax,8)
+        je      add_zero_coord_hit3
+back3:   
+        cmpl    $0, 4(%ebx,%eax,8)
+        je      add_zero_coord_hit4
+
+back4:
+        cmpl    $2, hit
+        jne      print_coords
+        #else return
+        ret 
+
+add_zero_coord_hit3:
+        incl    hit
+        jmp     back3
+
+add_zero_coord_hit4:
+        incl    hit
+        jmp     back4
+
+
+print_coords:
+################PRINT TO SCREEN##
+        pushl   $wormChar
+        pushl   4(%ebx, %eax, 8)
+        pushl   (%ebx, %eax, 8)
+
+        call    nib_put_scr
+
+        #cleanup stack
+        addl    $12, %esp
+##############################
         ret
 
+#########################################################
 
 #this algorithm goes from the last body part of the worm, and forward in the array
 #it fetches element from currentPos-1 to currentPos
@@ -362,18 +427,7 @@ print_tail:
         #saves  tail counter
         movl    %eax, 440(%ebx)
 
-        #call    check_zero_coordinate
-
-################PRINT TO SCREEN##################
-        pushl   $35#$wormChar
-        pushl   4(%ebx, %eax, 8)
-        pushl   (%ebx, %eax, 8)
-
-        call    nib_put_scr
-
-        #cleanup stack
-        addl    $12, %esp
-###################################################
+        call    check_zero_coordinate_for_print
 
         #restore  tail counter
         movl    440(%ebx), %eax
@@ -481,6 +535,16 @@ move:
         xorl    %eax, %eax
         movl    418(%ebx), %eax
 
+
+#         #######################body collission detection##
+#         call body_hit_detection_init
+
+#         #restores the boundary counter value
+#         xorl    %ecx, %ecx
+#         xorl    %eax, %eax
+#         movl    404(%ebx), %ecx
+# ###################################################
+
 ################update_tail#######################
         movl    $0, counter
 
@@ -586,12 +650,15 @@ finish_body_part_update:
 body_hit_detection_init:
         #clear counter
         xorl    %edx, %edx
+
         #uses edx for storing the counter for iteration through the body parts 
         #for x, y coord checking.
 
         #uses offset 416 for storing the number of hits for each iteration through the worm body
-        movl    $0, 416(%ebx)
-  
+        #movl    $0, 416(%ebx)
+
+
+
         #copy head X
         xorl    %eax, %eax
         movl   (%ebx, %edx,8), %eax
@@ -608,7 +675,15 @@ body_hit_detection_init:
 #compares X coordinate
 collision_detect:
         #set hit to 0
-        movl    $0, 416(%ebx)
+        #movl    $0, 416(%ebx)
+        #resets hit
+        movl    $0, hit
+
+        # movl    %edx, 500(%ebx)
+
+
+        # xorl    %edx, %edx
+        # movl    500(%ebx), %edx
 
         #if X coordinates are on the same spot, go to add_hit and increment hit number
         cmpl    %eax, (%ebx, %edx, 8)
@@ -626,7 +701,7 @@ continue:
         #if there's still body parts left to compare, if it is, then loop again
         #wormSize = 412(%ebx), counter = %edx
         cmpl    $wormSize, %edx
-        ja      collision_detect
+        jb      collision_detect
 
         #by some wierd reason, the last_position variable gets reset inside the body_collision
         #function call, so I have to replace it just before jumping out
@@ -640,17 +715,19 @@ continue:
 add_hit:
 
         #increments hit
-        incl    416(%ebx)
+        #incl    416(%ebx)
+        incl    hit
 
         jmp     collision_detect2
 
 add_hit2:
 
         #increments hit
-        incl    416(%ebx)
+        #incl    416(%ebx)
+        incl     hit
 
         #compares if there are two hits
-        cmpl    $2, 416(%ebx)
+        cmpl    $2, hit
         #if so, then finish program
         je      body_collide
         #else, continue with checking
