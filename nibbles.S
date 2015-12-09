@@ -5,7 +5,7 @@
 .set 	x,	            	25
 .set	y,	            	25
 .set	wormChar,	    	111
-.set    loopDelay,      	150000
+.set    loopDelay,      	190000
 .set	char,			35
 .set    border,         	43
 
@@ -444,10 +444,9 @@ print_worm_middle:
         #checks if counter value is 0 or 50, then it will quit the loop 
         #(hitting the wall simulation)
 wLoop:  cmpl    $0, %ecx
-        je      finish_loop
+        jle     finish_loop
         cmpl    $50, %ecx
-        je      finish_loop
-
+        jae      finish_loop
         #saves counter in registry ecx due to edx corruption during kbd call.
         movl    %ecx, 404(%ebx)
 
@@ -461,16 +460,7 @@ wLoop:  cmpl    $0, %ecx
 
         call    restore_counter
 
-	#pushl	%ecx
-	#pushl	$1988
-	#pushl	%ecx
-	#pushl	$parMessage
-	#call	printf
-	#addl	$12,%esp
-	#popl	%ecx
-
         # about 1 second delay for worm position update
-        #movl    %ecx, 404(%ebx)
         pushl   $loopDelay
         call    usleep
 
@@ -537,6 +527,9 @@ direction_move:
         cmpl    $258, last_position
         je      down
 
+        #restores counter after c-call
+        call    restore_counter
+
         ret
 
 left:
@@ -549,6 +542,9 @@ left:
         decl    (%ebx)
         decl     %ecx
         decl    404(%ebx)
+
+        xorl    %ecx, %ecx
+        #restores %ecx boundary value 
         movl    404(%ebx), %ecx
         ret
 right:
@@ -560,7 +556,10 @@ right:
 
         incl    (%ebx)
         incl    %ecx
+
         incl    404(%ebx)
+        xorl    %ecx, %ecx
+        #restores %ecx boundary value 
         movl    404(%ebx), %ecx
         ret
 up:
@@ -572,7 +571,10 @@ up:
         
         decl    4(%ebx)
         decl    %ecx
+
         decl    404(%ebx)
+        xorl    %ecx, %ecx
+        #restores %ecx boundary value 
         movl    404(%ebx), %ecx
         ret    
 
@@ -585,7 +587,10 @@ down:
         
         incl    4(%ebx)
         incl    %ecx
+
         incl    404(%ebx)
+        xorl    %ecx, %ecx
+        #restores %ecx boundary value 
         movl    404(%ebx), %ecx
         ret
 
@@ -737,9 +742,6 @@ print_tail:
 
 
 print_tail_space:
-       # xorl    %edx, %edx
-       # fetches value of currentPos X-coord to edx
-        #movl    (%ebx, %eax, 8), %edx
 
         #saves  tail counter
         movl    %eax, 440(%ebx)
@@ -749,11 +751,6 @@ print_tail_space:
         #restore  tail counter
         movl    440(%ebx), %eax
 
-        # pushl   4(%ebx, %eax, 8)
-        # pushl   (%ebx, %eax, 8) 
-        # pushl   $print_format
-        # call    printf
-        # addl    $12, %esp
 
         #restore  tail counter
         movl    440(%ebx), %eax
@@ -771,7 +768,20 @@ print_tail_space:
         jb      print_tail_space
         ret
 
+update_tail_init:
+        xorl    %eax, %eax
+        movl    wormSize, %eax
 
+        #position wormSize-1 (last body part)
+        decl    %eax
+
+        #moves wormSize-1 to counter
+        movl    %eax, counter
+
+        #compare and checks if %eax is bigger than 0
+        cmpl    $0, %eax
+        ja      update_tail
+        ret
 
 move:
         #restores position of boundary counter
@@ -805,31 +815,14 @@ move:
         xorl    %eax, %eax
         movl    418(%ebx), %eax
 
-
-#         #######################body collission detection##
-#         call body_hit_detection_init
-
-#         #restores the boundary counter value
-#         xorl    %ecx, %ecx
-#         xorl    %eax, %eax
-#         movl    404(%ebx), %ecx
-# ###################################################
-
 ################update_tail#######################
         movl    $0, counter
 
         xorl    %eax, %eax
 
+        #checks first if wormsize is bigger than 1, if so, then tail will be updated
+        call    update_tail_init
 
-        movl    wormSize, %eax
-        #position wormSize-1 (last body part)
-        decl    %eax
-
-        #moves wormSize-1 to counter
-        movl    %eax, counter
-
-        #updates the tail coordinates for the worm
-        call    update_tail
 ###################################################
 
 ############Moves in a set direction by the arrow keys########
@@ -935,14 +928,6 @@ body_hit_detection_init:
         #clear counter
         xorl    %edx, %edx
 
-        #uses edx for storing the counter for iteration through the body parts 
-        #for x, y coord checking.
-
-        #uses offset 416 for storing the number of hits for each iteration through the worm body
-        #movl    $0, 416(%ebx)
-
-
-
         #copy head X
         xorl    %eax, %eax
         movl   (%ebx, %edx,8), %eax
@@ -953,21 +938,12 @@ body_hit_detection_init:
         #sets body counter to 1, for first body part comparison
         movl    $1, %edx
 
-
         jmp collision_detect
 
 #compares X coordinate
 collision_detect:
-        #set hit to 0
-        #movl    $0, 416(%ebx)
         #resets hit
         movl    $0, hit
-
-        # movl    %edx, 500(%ebx)
-
-
-        # xorl    %edx, %edx
-        # movl    500(%ebx), %edx
 
         #if X coordinates are on the same spot, go to add_hit and increment hit number
         cmpl    %eax, (%ebx, %edx, 8)
@@ -995,9 +971,7 @@ continue:
         #else jump back to function body_hit_detection_init was called from
         ret
 
-
 add_hit:
-
         #increments hit
         #incl    416(%ebx)
         incl    hit
@@ -1005,7 +979,6 @@ add_hit:
         jmp     collision_detect2
 
 add_hit2:
-
         #increments hit
         #incl    416(%ebx)
         incl     hit
@@ -1021,8 +994,6 @@ reset_hits:
         movl    $0, 416(%ebx)
         ret
 ##################################################
-
-
 
 #finish body collission detection of both x and y coordinates are the same with head as
 #one of the body parts it collides with.
@@ -1047,7 +1018,4 @@ reset_wormSize_counter:
 
  exit_program:       
 
-	call 	nib_end	
-
-
-
+	call 	nib_end
