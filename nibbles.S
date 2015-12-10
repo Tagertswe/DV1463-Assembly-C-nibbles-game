@@ -145,9 +145,9 @@ getApples:
 floor:
 	########## print to screen ###############
 	pushl	$45				# char (-)
-      	pushl	borderSize			# y cord
-      	pushl	counter				# x cord
-	call nib_put_scr
+    pushl	borderSize			# y cord
+    pushl	counter				# x cord
+	call    nib_put_scr
 	addl    $12, %esp
 	incl	counter				# increment
 
@@ -158,9 +158,9 @@ floor:
 rWall:
 	########## print to screen ###############
 	pushl	$124				# char (|)
-      	pushl	counter				# y cord
-      	pushl	borderSize			# x cord
-	call nib_put_scr
+    pushl	counter				# y cord
+    pushl	borderSize			# x cord
+	call    nib_put_scr
 	addl    $12, %esp
 	incl	counter				# increment
 
@@ -172,9 +172,9 @@ rWall:
 lWall:
 	########## print to screen ###############
 	pushl	$124				# char (|)
-      	pushl	counter				# y cord
-      	pushl	$0				# x cord
-	call nib_put_scr
+    pushl	counter				# y cord
+    pushl	$0				# x cord
+	call    nib_put_scr
 	addl    $12, %esp
 	incl	counter				# increment
 
@@ -187,9 +187,9 @@ lWall:
 roof:
 	########## print to screen ###############
 	pushl	$45				# char (-)
-      	pushl	$0				# y cord
-      	pushl	counter				# x cord
-	call nib_put_scr
+    pushl	$0				# y cord
+    pushl	counter				# x cord
+	call    nib_put_scr
 	addl    $12, %esp
 	incl	counter				# increment
 
@@ -246,13 +246,6 @@ loop:
 	call nib_put_scr
 	addl    $12, %esp
 
-	### test prints the new apple (x,y)
-	#pushl	%ecx
-	#pushl	%ebx
-	#pushl	$message
-	#call	printf
-	#addl	$12,%esp
-
 	ret
 ####################################################################################################
 
@@ -277,15 +270,7 @@ acd:
 	leal	appleCord,%ebx		## apple cords is now in %ebx
 	xorl	%edx,%edx
 
-	#pushl	%ebx
-	#pushl	%ecx
-	#pushl	4(%ecx)
-	#pushl	(%ecx)
-	#pushl	$cmpMessage2
-	#call	printf
-	#addl	$12,%esp
-	#popl	%ecx
-	#popl	%ebx
+
 loop1:
 	
 	incl	counter
@@ -326,11 +311,7 @@ loop1:
 	call nib_put_scr
 	addl    $12, %esp
 
-	#pushl	(%ebx)
-	#pushl	4(%ebx)
-	#pushl	$cmpMessage2
-	#call	printf
-	#addl	$12,%esp
+
 
 	## zeroing the cordinates
 	movl	$0,(%ebx)	
@@ -355,33 +336,33 @@ iterate:
 #delete this, unecessary
 setupWorm:
         #resets used registry
-	movl	$0,counter
+	    movl	$0,counter
         xorl    %ebx, %ebx
         xorl    %ecx, %ecx
         xorl    %edx, %edx
         xorl    %eax, %eax
-        jmp     setupBorders
-/* add left, down, right borders in this one later!!!!! */
-setupBorders: cmpl      $50, %ebx
-        je      resetValues
-        pushl   %ecx # 0
-        pushl   $border # 4
-        pushl   %edx # 8
-        pushl   %ecx # 12
-        call    nib_put_scr
+        jmp     resetValues
+# /* add left, down, right borders in this one later!!!!! */
+# setupBorders: cmpl      $50, %ebx
+#         je      resetValues
+#         pushl   %ecx # 0
+#         pushl   $border # 4
+#         pushl   %edx # 8
+#         pushl   %ecx # 12
+#         call    nib_put_scr
 
-        popl    %ecx # pops 12
-        popl    %edx # pops 8
-        addl    $4, %esp #pops 4
-        popl    %ecx #pops 0
+#         popl    %ecx # pops 12
+#         popl    %edx # pops 8
+#         addl    $4, %esp #pops 4
+#         popl    %ecx #pops 0
 
 
-        #increments counter
-        incl    %ebx
-        #increments x axis value
-        incl    %ecx
+#         #increments counter
+#         incl    %ebx
+#         #increments x axis value
+#         incl    %ecx
 
-        jmp     setupBorders
+#         jmp     setupBorders
 
 
 #rename this
@@ -792,7 +773,7 @@ move:
         movl    %eax,418(%ebx)
 
 ################removes old worm position########
-        pushl   $32#$32
+        pushl   $32
         pushl   4(%ebx)
         pushl   (%ebx)
         call nib_put_scr
@@ -841,19 +822,19 @@ move:
 ########################################################
 
 
-	pushl	%ecx
-	pushl	counter
-	pushl	%ebx
-	pushl	%edx
-	pushl	%eax
-	call 	acd
-	popl	%eax
-	popl	%edx
-	popl	%ebx
-	popl	counter
-	popl	%ecx
+    	pushl	%ecx
+    	pushl	counter
+    	pushl	%ebx
+    	pushl	%edx
+    	pushl	%eax
+    	call 	acd
+    	popl	%eax
+    	popl	%edx
+    	popl	%ebx
+    	popl	counter
+    	popl	%ecx
 
-	
+	    call    restore_counter
 
 #######################body collission detection##
         call body_hit_detection_init
@@ -885,6 +866,7 @@ move:
 
 
         #moves temporary value for boundary counter back into %ecx registry
+        xorl    %ecx, %ecx
         movl    404(%ebx), %ecx
 
         #makes sure last_position gets the value that has been set after a key press.
